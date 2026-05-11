@@ -1,6 +1,6 @@
 # 深空AI生存冷链决策系统
 
-DeepSpace AI Survival Cold-Chain Decision System
+DeepSpace AI Survival Cold-Chain Decision System - Mars Habitat Control Platform
 
 ## 项目简介
 
@@ -66,7 +66,7 @@ git init
 git add .
 git commit -m "Initial commit: DeepSpace AI Survival System"
 git branch -M main
-git remote add origin https://github.com/YOUR_USERNAME/deepspace-ai-survival.git
+git remote add origin https://github.com/si21sio74kei-cmyk/space-survival-plan.git
 git push -u origin main
 ```
 
