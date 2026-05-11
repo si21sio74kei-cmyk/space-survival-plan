@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>深空AI生存冷链决策系统</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- 引入第三方库 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.0/echarts.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div id="starfield"></div>
+    <div id="emergency-overlay"></div>
+    
+    <div class="hud-container">
+        <!-- 顶部状态栏 -->
+        <header class="top-bar glass-panel">
+            <h1>DEEPSPACE AI SURVIVAL SYSTEM</h1>
+            <div class="status-indicators">
+                <span><i class="fas fa-satellite-dish"></i> AI CORE: ONLINE</span>
+                <span><i class="fas fa-users"></i> CREW: <span id="crew-display">4</span></span>
+                <span><i class="fas fa-shield-alt"></i> STABILITY: <span id="stability-display">98%</span></span>
+                <span><i class="fas fa-calendar-alt"></i> DAY: <span id="day-display">001</span></span>
+            </div>
+        </header>
+
+        <div class="main-layout">
+            <!-- 左侧导航 -->
+            <nav class="sidebar glass-panel">
+                <ul>
+                    <li class="active"><i class="fas fa-tachometer-alt"></i> 总控制台</li>
+                    <li><i class="fas fa-utensils"></i> 食物资源系统</li>
+                    <li><i class="fas fa-briefcase-medical"></i> 医疗冷链系统</li>
+                    <li><i class="fas fa-bolt"></i> 能源管理系统</li>
+                    <li><i class="fas fa-wind"></i> 环境控制系统</li>
+                    <li><i class="fas fa-exclamation-triangle"></i> 紧急协议</li>
+                    <li><i class="fas fa-history"></i> 任务时间线</li>
+                    <li><i class="fas fa-brain"></i> AI核心</li>
+                </ul>
+            </nav>
+
+            <!-- 中央主视图 -->
+            <main class="central-view glass-panel">
+                <div class="dashboard-header">
+                    <div id="module-title">总控制台 DASHBOARD</div>
+                    <div class="survival-time-box">
+                        <small>预计可生存时间 EST. SURVIVAL TIME</small>
+                        <h2 id="est-survival-days" style="margin: 0; color: var(--tech-cyan); font-size: 3rem;">143 DAYS</h2>
+                    </div>
+                </div>
+                <div id="main-chart-container" style="width: 100%; height: 400px;"></div>
+                <div class="metrics-grid">
+                    <div class="metric-box">
+                        <h3>生存指数 SURVIVAL INDEX</h3>
+                        <div id="gauge-chart" style="width: 100%; height: 200px;"></div>
+                    </div>
+                    <div class="metric-box">
+                        <h3>预测时间线 PREDICTION TIMELINE</h3>
+                        <div id="prediction-chart" style="width: 100%; height: 200px;"></div>
+                    </div>
+                </div>
+            </main>
+
+            <!-- 右侧日志区 -->
+            <aside class="log-panel glass-panel">
+                <h3>AI DECISION LOG</h3>
+                <div id="ai-logs">
+                    <!-- 动态日志将插入这里 -->
+                </div>
+                <div class="history-timeline">
+                    <h4>TASK HISTORY</h4>
+                    <ul id="history-list"></ul>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
