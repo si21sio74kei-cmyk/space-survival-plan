@@ -32,4 +32,5 @@ Thumbs.db
 
 # Environment
 .env
-config.py
+.env.local
+.env.*.local
