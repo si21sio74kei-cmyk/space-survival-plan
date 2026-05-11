@@ -23,8 +23,5 @@
       "src": "/(.*)",
       "dest": "frontend/$1"
     }
-  ],
-  "env": {
-    "ZHIPU_API_KEY": "@zhipu_api_key"
-  }
+  ]
 }
