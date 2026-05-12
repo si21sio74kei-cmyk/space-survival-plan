@@ -69,6 +69,18 @@ class AISurvivalEngine:
         status['base_stability'] = (status['energy_level'] + status['food_stability'] + status['medical_safety']) / 3
         status['environment_score'] = (status['oxygen_level'] + status['humidity'] * 2 + status['pressure']) / 3
         status['estimated_survival_days'] = int(status['survival_index'] * 1.5)
+        
+        # 生成预测时间线（基于当前状态推演）
+        status['predictions'] = [
+            max(0, int(status['survival_index'] * 0.9)),
+            max(0, int(status['survival_index'] * 0.75)),
+            max(0, int(status['survival_index'] * 0.6)),
+            max(0, int(status['survival_index'] * 0.45))
+        ]
+        
+        # emergency_mode默认为False（只在simulate_step中可能为True）
+        status['emergency_mode'] = False
+        
         return status
 
     def get_food_inventory(self):
