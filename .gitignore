@@ -10,8 +10,8 @@ ENV/
 *.db
 survival_system.db
 
-# 旧的文件（已移到backend/）
-app.py
+# 旧文件
+backend/
 start.bat
 启动应用.bat
 

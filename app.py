@@ -7,10 +7,10 @@ import os
 from flask import Flask, render_template, jsonify, request
 from datetime import datetime
 
-# 添加backend到Python路径
-backend_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backend')
-if backend_dir not in sys.path:
-    sys.path.insert(0, backend_dir)
+# 添加当前目录到Python路径
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
 
 # 导入AI引擎
 from services.ai_engine import engine as ai_engine
