@@ -5,7 +5,14 @@ import os
 from zhipuai import ZhipuAI
 from config import ZHIPU_API_KEY
 
-client = ZhipuAI(api_key=ZHIPU_API_KEY)
+# 延迟初始化client，避免API KEY为空时失败
+client = None
+if ZHIPU_API_KEY:
+    try:
+        client = ZhipuAI(api_key=ZHIPU_API_KEY)
+    except Exception as e:
+        print(f"AI client initialization failed: {e}")
+        client = None
 
 # Vercel Serverless环境：使用函数属性模拟持久化存储
 # 每次请求时，函数实例会保持，但全局变量会重置
@@ -160,6 +167,10 @@ class AISurvivalEngine:
         """调用GLM-4 AI分析当前状态并返回决策"""
         ai_advice = "系统运行稳定"
         ai_action_taken = []
+        
+        # 如果没有AI客户端，直接返回默认建议
+        if client is None:
+            return ai_advice, ai_action_taken
         
         try:
             prompt = f"""
