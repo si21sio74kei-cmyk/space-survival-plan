@@ -1,20 +1,11 @@
-from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
-from models import SurvivalStatus, SessionLocal, ResourceLog
+from fastapi import APIRouter
 from services.ai_engine import engine
 from services.survival_predictor import SurvivalPredictor
 
 router = APIRouter()
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
 @router.get("/survival-status")
-def get_survival_status(db: Session = Depends(get_db)):
+def get_survival_status():
     """
     获取当前生存状态
     包括生存指数、任务天数、乘员数等核心信息
@@ -26,21 +17,27 @@ def get_survival_status(db: Session = Depends(get_db)):
     predictions = SurvivalPredictor.predict_timeline(status)
     
     return {
-        "mission_day": status.mission_day,
-        "survival_index": round(status.survival_index, 1),
-        "crew_count": status.crew_count,
+        "mission_day": status['mission_day'],
+        "survival_index": round(status['survival_index'], 1),
+        "crew_count": status['crew_count'],
         "estimated_survival_days": survival_days,
         "predictions": predictions,
-        "emergency_mode": status.emergency_mode if hasattr(status, 'emergency_mode') else False
+        "emergency_mode": False  # 内存存储，暂不支持emergency_mode
     }
 
 @router.post("/reset-mission")
-def reset_mission(db: Session = Depends(get_db)):
+def reset_mission():
     """
     重置任务（用于测试）
     """
-    status = SurvivalStatus()
-    db.add(status)
-    db.commit()
-    db.refresh(status)
-    return {"message": "Mission reset successfully", "new_mission_day": status.mission_day}
+    from services.ai_engine import get_persistent_state
+    state, logs = get_persistent_state()
+    
+    # 重置状态
+    state['mission_day'] = 1
+    state['survival_index'] = 98.0
+    state['food_stability'] = 95.0
+    state['medical_safety'] = 98.0
+    state['energy_level'] = 92.0
+    
+    return {"message": "Mission reset successfully", "new_mission_day": state['mission_day']}
