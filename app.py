@@ -109,6 +109,195 @@ def adjust_parameters():
     result = ai_engine.adjust_parameters(data)
     return jsonify(result)
 
+# ==================== 食物资源管理 API ====================
+
+@app.route('/api/food/add', methods=['POST'])
+def add_food():
+    """添加食物"""
+    data = request.get_json() or {}
+    result = ai_engine.add_food_item(data)
+    return jsonify(result)
+
+@app.route('/api/food/remove/<int:item_id>', methods=['POST'])
+def remove_food(item_id):
+    """移除食物"""
+    data = request.get_json() or {}
+    reason = data.get('reason', '')
+    result = ai_engine.remove_food_item(item_id, reason)
+    return jsonify(result)
+
+@app.route('/api/food/consumption', methods=['POST'])
+def update_consumption():
+    """更新消耗速率"""
+    data = request.get_json() or {}
+    rate = data.get('rate', 1.0)
+    activity_level = data.get('activity_level', 'normal')
+    result = ai_engine.update_consumption_rate(rate, activity_level)
+    return jsonify(result)
+
+@app.route('/api/food/emergency-ration', methods=['POST'])
+def toggle_emergency_ration():
+    """切换紧急配给模式"""
+    data = request.get_json() or {}
+    enabled = data.get('enabled', False)
+    percentage = data.get('percentage', 100)
+    result = ai_engine.toggle_emergency_ration(enabled, percentage)
+    return jsonify(result)
+
+# ==================== 医疗冷链管理 API ====================
+
+@app.route('/api/medical/add', methods=['POST'])
+def add_medical():
+    """添加医疗物品"""
+    data = request.get_json() or {}
+    result = ai_engine.add_medical_item(data)
+    return jsonify(result)
+
+@app.route('/api/medical/temp-range', methods=['POST'])
+def update_medical_temp():
+    """更新医疗温度范围"""
+    data = request.get_json() or {}
+    min_temp = data.get('min', -80)
+    max_temp = data.get('max', -60)
+    result = ai_engine.update_medical_temp_range(min_temp, max_temp)
+    return jsonify(result)
+
+@app.route('/api/medical/priority', methods=['POST'])
+def set_medical_priority():
+    """设置医疗优先级"""
+    data = request.get_json() or {}
+    priority = data.get('priority', 'high')
+    result = ai_engine.set_medical_priority(priority)
+    return jsonify(result)
+
+# ==================== 能源管理 API ====================
+
+@app.route('/api/energy/distribution', methods=['POST'])
+def update_energy_dist():
+    """更新能源分配"""
+    data = request.get_json() or {}
+    result = ai_engine.update_energy_distribution(data)
+    return jsonify(result)
+
+@app.route('/api/energy/saving-mode', methods=['POST'])
+def set_energy_saving():
+    """设置节能模式"""
+    data = request.get_json() or {}
+    mode = data.get('mode', 'normal')
+    result = ai_engine.set_energy_saving_mode(mode)
+    return jsonify(result)
+
+# ==================== 环境控制 API ====================
+
+@app.route('/api/environment/targets', methods=['POST'])
+def update_env_targets():
+    """更新环境目标值"""
+    data = request.get_json() or {}
+    result = ai_engine.update_env_targets(data)
+    return jsonify(result)
+
+@app.route('/api/environment/alerts', methods=['POST'])
+def update_env_alerts():
+    """更新环境警报阈值"""
+    data = request.get_json() or {}
+    result = ai_engine.update_env_alerts(data)
+    return jsonify(result)
+
+@app.route('/api/environment/ventilation', methods=['POST'])
+def set_ventilation():
+    """设置通风模式"""
+    data = request.get_json() or {}
+    mode = data.get('mode', 'auto')
+    cycle = data.get('cycle', 30)
+    result = ai_engine.set_ventilation_mode(mode, cycle)
+    return jsonify(result)
+
+# ==================== AI预测与决策 API ====================
+
+@app.route('/api/ai/prediction-params', methods=['POST'])
+def update_prediction_params():
+    """更新预测参数"""
+    data = request.get_json() or {}
+    result = ai_engine.update_prediction_params(data)
+    return jsonify(result)
+
+@app.route('/api/ai/automation-level', methods=['POST'])
+def set_ai_automation():
+    """设置AI自动化级别"""
+    data = request.get_json() or {}
+    level = data.get('level', 'semi-auto')
+    result = ai_engine.set_ai_automation_level(level)
+    return jsonify(result)
+
+@app.route('/api/ai/preferences', methods=['POST'])
+def set_ai_prefs():
+    """设置AI偏好"""
+    data = request.get_json() or {}
+    risk_tolerance = data.get('risk_tolerance', 50)
+    priority = data.get('priority', 'survival')
+    result = ai_engine.set_ai_preferences(risk_tolerance, priority)
+    return jsonify(result)
+
+# ==================== 紧急协议 API ====================
+
+@app.route('/api/emergency/configure', methods=['POST'])
+def configure_emergency():
+    """配置紧急协议"""
+    data = request.get_json() or {}
+    result = ai_engine.configure_emergency_protocol(data)
+    return jsonify(result)
+
+@app.route('/api/emergency/trigger-manual', methods=['POST'])
+def trigger_emergency_manual():
+    """手动触发紧急协议"""
+    data = request.get_json() or {}
+    level = data.get('level', 'warning')
+    result = ai_engine.trigger_emergency_manual(level)
+    return jsonify(result)
+
+# ==================== 宇航员管理 API ====================
+
+@app.route('/api/crew/add', methods=['POST'])
+def add_crew():
+    """添加宇航员"""
+    data = request.get_json() or {}
+    result = ai_engine.add_crew_member(data)
+    return jsonify(result)
+
+@app.route('/api/crew/remove/<int:member_id>', methods=['POST'])
+def remove_crew(member_id):
+    """移除宇航员"""
+    result = ai_engine.remove_crew_member(member_id)
+    return jsonify(result)
+
+@app.route('/api/crew/list')
+def list_crew():
+    """获取宇航员列表"""
+    state, _ = ai_engine.__class__.__bases__[0].__dict__.get('get_persistent_state', lambda: ([], []))()
+    # 简化处理，直接返回状态中的crew_members
+    from ai_engine import get_persistent_state
+    state, _ = get_persistent_state()
+    return jsonify(state['crew_members'])
+
+# ==================== 通信与日志 API ====================
+
+@app.route('/api/logs/add', methods=['POST'])
+def add_log():
+    """添加手动日志"""
+    data = request.get_json() or {}
+    result = ai_engine.add_manual_log(data)
+    return jsonify(result)
+
+@app.route('/api/reports/custom', methods=['POST'])
+def generate_custom_report():
+    """生成自定义报告"""
+    data = request.get_json() or {}
+    report_type = data.get('type', 'daily')
+    depth = data.get('depth', 'standard')
+    focus_areas = data.get('focus_areas', ['survival', 'resources'])
+    result = ai_engine.generate_custom_report(report_type, depth, focus_areas)
+    return jsonify(result)
+
 # ==================== 本地运行 ====================
 
 if __name__ == '__main__':

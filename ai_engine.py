@@ -29,6 +29,7 @@ def get_persistent_state():
     if not hasattr(get_persistent_state, '_state'):
         # 初始化状态
         get_persistent_state._state = {
+            # 基础生存状态
             'mission_day': 1,
             'survival_index': 98.0,
             'food_stability': 95.0,
@@ -44,7 +45,111 @@ def get_persistent_state():
             'pressure': 101.3,
             'backup_power_hours': 48.0,
             'crew_count': 4,
-            'last_updated': datetime.datetime.utcnow().isoformat()
+            'last_updated': datetime.datetime.utcnow().isoformat(),
+            
+            # 食物资源管理
+            'food_inventory': [],  # 食物库存列表
+            'consumption_rate': 1.0,  # 每日消耗速率
+            'emergency_ration_mode': False,  # 紧急配给模式
+            'ration_percentage': 100,  # 配给百分比
+            'food_temperature_zones': {'zone1': -18, 'zone2': 4, 'zone3': -70},  # 温度区域
+            'food_expiry_warning_days': 7,  # 过期预警天数
+            'food_min_stock_warning': 20,  # 最低库存预警
+            
+            # 医疗冷链管理
+            'medical_items': [],  # 医疗物品列表
+            'medical_temp_range': {'min': -80, 'max': -60},  # 温度范围
+            'medical_alert_threshold': 5,  # 警报阈值
+            'medical_backup_trigger': 30,  # 备用电源触发条件
+            'medical_priority_level': 'high',  # 优先级
+            
+            # 能源管理
+            'energy_distribution': {  # 能源分配比例
+                'medical': 30,
+                'food': 25,
+                'environment': 25,
+                'other': 20
+            },
+            'energy_saving_mode': 'normal',  # 节能模式
+            'solar_charging_hours': 8,  # 太阳能充电时间
+            'low_battery_response': ['communications', 'life_support'],  # 低电量保留功能
+            
+            # 环境控制
+            'env_targets': {  # 目标值
+                'oxygen': 21.0,
+                'temperature': 22.0,
+                'humidity': 45.0,
+                'co2_max': 0.5
+            },
+            'env_alerts': {  # 警报阈值
+                'oxygen_min': 19.0,
+                'oxygen_max': 23.0,
+                'temp_min': 18.0,
+                'temp_max': 26.0,
+                'humidity_min': 30.0,
+                'humidity_max': 60.0,
+                'co2_max': 1.0
+            },
+            'ventilation_mode': 'auto',  # 通风模式
+            'ventilation_cycle': 30,  # 循环时间(分钟)
+            
+            # AI预测与决策
+            'ai_automation_level': 'semi-auto',  # 自动化级别
+            'ai_risk_tolerance': 50,  # 风险承受度
+            'ai_priority_preference': 'survival',  # 优先级偏好
+            'prediction_params': {  # 预测参数
+                'crew_count': 4,
+                'mission_duration': 365,
+                'activity_level': 'normal',
+                'resupply_interval': 90
+            },
+            
+            # 紧急协议
+            'emergency_protocols': [],  # 协议配置
+            'emergency_triggers': {  # 触发器
+                'survival_index_min': 30,
+                'energy_level_min': 10,
+                'oxygen_level_min': 15
+            },
+            'emergency_actions': ['alert_crew', 'conserve_energy', 'prioritize_life_support'],  # 执行动作
+            
+            # 宇航员管理
+            'crew_members': [  # 宇航员列表
+                {
+                    'id': 1,
+                    'name': '宇航员A',
+                    'weight': 70,
+                    'age': 35,
+                    'health_status': 'good',
+                    'special_needs': [],
+                    'calorie_needs': 2500,
+                    'diet_requirements': [],
+                    'allergies': []
+                }
+            ],
+            'crew_activities': [],  # 活动安排
+            
+            # 系统设置
+            'notification_settings': {  # 通知设置
+                'alert_types': ['critical', 'warning'],
+                'notification_methods': ['visual', 'sound']
+            },
+            'display_settings': {  # 显示设置
+                'refresh_rate': 3,  # 刷新频率(秒)
+                'chart_options': 'detailed'
+            },
+            'backup_settings': {  # 备份设置
+                'auto_backup_time': '00:00',
+                'data_retention_days': 30
+            },
+            
+            # 通信与日志
+            'communication_reports': [],  # 通信报告
+            'manual_logs': [],  # 手动日志
+            'report_preferences': {  # 报告偏好
+                'depth': 'standard',
+                'focus_areas': ['survival', 'resources']
+            }
         }
         get_persistent_state._logs = []
         get_persistent_state._logs.append({
@@ -419,6 +524,370 @@ class AISurvivalEngine:
             'adjusted': adjusted,
             'new_status': self.get_current_status()
         }
+    
+    # ==================== 食物资源管理 ====================
+    
+    def add_food_item(self, item_data):
+        """添加食物到库存"""
+        state, logs = get_persistent_state()
+        
+        new_item = {
+            'id': len(state['food_inventory']) + 1,
+            'name': item_data.get('name', '未知食物'),
+            'quantity': float(item_data.get('quantity', 0)),
+            'expiry_date': item_data.get('expiry_date', ''),
+            'nutrition_type': item_data.get('nutrition_type', 'protein'),  # protein/carb/fat/vitamin
+            'added_date': datetime.datetime.utcnow().isoformat(),
+            'status': 'normal'
+        }
+        
+        state['food_inventory'].append(new_item)
+        
+        log_entry = {
+            'timestamp': datetime.datetime.utcnow().isoformat(),
+            'log_type': 'INFO',
+            'message': f'添加食物: {new_item["name"]} x{new_item["quantity"]}',
+            'ai_decision': 'AI已更新食物库存'
+        }
+        logs.insert(0, log_entry)
+        
+        return {'success': True, 'item': new_item}
+    
+    def remove_food_item(self, item_id, reason=''):
+        """移除食物"""
+        state, logs = get_persistent_state()
+        
+        removed = None
+        remaining = []
+        for item in state['food_inventory']:
+            if item['id'] == item_id:
+                removed = item
+            else:
+                remaining.append(item)
+        
+        if removed:
+            state['food_inventory'] = remaining
+            log_entry = {
+                'timestamp': datetime.datetime.utcnow().isoformat(),
+                'log_type': 'WARNING',
+                'message': f'移除食物: {removed["name"]} (原因: {reason})',
+                'ai_decision': 'AI已记录食物消耗'
+            }
+            logs.insert(0, log_entry)
+            return {'success': True, 'removed': removed}
+        
+        return {'success': False, 'error': '物品不存在'}
+    
+    def update_consumption_rate(self, rate, activity_level='normal'):
+        """更新消耗速率"""
+        state, _ = get_persistent_state()
+        state['consumption_rate'] = float(rate)
+        state['prediction_params']['activity_level'] = activity_level
+        return {'success': True, 'new_rate': rate}
+    
+    def toggle_emergency_ration(self, enabled, percentage=100):
+        """切换紧急配给模式"""
+        state, logs = get_persistent_state()
+        state['emergency_ration_mode'] = enabled
+        state['ration_percentage'] = int(percentage)
+        
+        mode_text = '启用' if enabled else '关闭'
+        log_entry = {
+            'timestamp': datetime.datetime.utcnow().isoformat(),
+            'log_type': 'WARNING' if enabled else 'INFO',
+            'message': f'{mode_text}紧急配给模式 (配给率: {percentage}%)',
+            'ai_decision': 'AI已调整配给策略'
+        }
+        logs.insert(0, log_entry)
+        
+        return {'success': True, 'mode': enabled, 'percentage': percentage}
+    
+    # ==================== 医疗冷链管理 ====================
+    
+    def add_medical_item(self, item_data):
+        """添加医疗物品"""
+        state, logs = get_persistent_state()
+        
+        new_item = {
+            'id': len(state['medical_items']) + 1,
+            'type': item_data.get('type', 'medicine'),  # vaccine/medicine/sample
+            'name': item_data.get('name', '未知物品'),
+            'quantity': float(item_data.get('quantity', 0)),
+            'storage_temp': float(item_data.get('storage_temp', -70)),
+            'urgency': item_data.get('urgency', 'normal'),  # low/normal/high/critical
+            'added_date': datetime.datetime.utcnow().isoformat()
+        }
+        
+        state['medical_items'].append(new_item)
+        
+        log_entry = {
+            'timestamp': datetime.datetime.utcnow().isoformat(),
+            'log_type': 'INFO',
+            'message': f'添加医疗物品: {new_item["name"]} ({new_item["type"]})',
+            'ai_decision': 'AI已更新医疗库存'
+        }
+        logs.insert(0, log_entry)
+        
+        return {'success': True, 'item': new_item}
+    
+    def update_medical_temp_range(self, min_temp, max_temp):
+        """更新医疗温度范围"""
+        state, _ = get_persistent_state()
+        state['medical_temp_range'] = {'min': float(min_temp), 'max': float(max_temp)}
+        return {'success': True, 'range': state['medical_temp_range']}
+    
+    def set_medical_priority(self, priority_level):
+        """设置医疗优先级"""
+        state, _ = get_persistent_state()
+        state['medical_priority_level'] = priority_level
+        return {'success': True, 'priority': priority_level}
+    
+    # ==================== 能源管理 ====================
+    
+    def update_energy_distribution(self, distribution):
+        """更新能源分配比例"""
+        state, _ = get_persistent_state()
+        
+        # 验证总和是否为100
+        total = sum(distribution.values())
+        if abs(total - 100) > 0.1:
+            return {'success': False, 'error': f'分配比例总和必须为100%，当前为{total}%'}
+        
+        state['energy_distribution'] = distribution
+        return {'success': True, 'distribution': distribution}
+    
+    def set_energy_saving_mode(self, mode):
+        """设置节能模式"""
+        state, logs = get_persistent_state()
+        valid_modes = ['normal', 'moderate', 'aggressive', 'critical']
+        if mode not in valid_modes:
+            return {'success': False, 'error': f'无效模式，可选: {valid_modes}'}
+        
+        state['energy_saving_mode'] = mode
+        
+        log_entry = {
+            'timestamp': datetime.datetime.utcnow().isoformat(),
+            'log_type': 'INFO',
+            'message': f'切换节能模式: {mode}',
+            'ai_decision': 'AI已调整能源策略'
+        }
+        logs.insert(0, log_entry)
+        
+        return {'success': True, 'mode': mode}
+    
+    # ==================== 环境控制 ====================
+    
+    def update_env_targets(self, targets):
+        """更新环境目标值"""
+        state, _ = get_persistent_state()
+        state['env_targets'].update(targets)
+        return {'success': True, 'targets': state['env_targets']}
+    
+    def update_env_alerts(self, alerts):
+        """更新环境警报阈值"""
+        state, _ = get_persistent_state()
+        state['env_alerts'].update(alerts)
+        return {'success': True, 'alerts': state['env_alerts']}
+    
+    def set_ventilation_mode(self, mode, cycle_time=30):
+        """设置通风模式"""
+        state, _ = get_persistent_state()
+        state['ventilation_mode'] = mode  # auto/manual
+        state['ventilation_cycle'] = int(cycle_time)
+        return {'success': True, 'mode': mode, 'cycle': cycle_time}
+    
+    # ==================== AI预测与决策 ====================
+    
+    def update_prediction_params(self, params):
+        """更新预测参数"""
+        state, _ = get_persistent_state()
+        state['prediction_params'].update(params)
+        return {'success': True, 'params': state['prediction_params']}
+    
+    def set_ai_automation_level(self, level):
+        """设置AI自动化级别"""
+        state, logs = get_persistent_state()
+        valid_levels = ['manual', 'semi-auto', 'full-auto']
+        if level not in valid_levels:
+            return {'success': False, 'error': f'无效级别，可选: {valid_levels}'}
+        
+        state['ai_automation_level'] = level
+        
+        log_entry = {
+            'timestamp': datetime.datetime.utcnow().isoformat(),
+            'log_type': 'INFO',
+            'message': f'AI自动化级别设置为: {level}',
+            'ai_decision': 'AI控制权限已更新'
+        }
+        logs.insert(0, log_entry)
+        
+        return {'success': True, 'level': level}
+    
+    def set_ai_preferences(self, risk_tolerance, priority):
+        """设置AI偏好"""
+        state, _ = get_persistent_state()
+        state['ai_risk_tolerance'] = int(risk_tolerance)
+        state['ai_priority_preference'] = priority
+        return {'success': True, 'risk_tolerance': risk_tolerance, 'priority': priority}
+    
+    # ==================== 紧急协议 ====================
+    
+    def configure_emergency_protocol(self, protocol_data):
+        """配置紧急协议"""
+        state, logs = get_persistent_state()
+        
+        protocol = {
+            'id': len(state['emergency_protocols']) + 1,
+            'name': protocol_data.get('name', '未命名协议'),
+            'trigger_conditions': protocol_data.get('triggers', {}),
+            'actions': protocol_data.get('actions', []),
+            'delay_seconds': int(protocol_data.get('delay', 0)),
+            'enabled': True
+        }
+        
+        state['emergency_protocols'].append(protocol)
+        
+        log_entry = {
+            'timestamp': datetime.datetime.utcnow().isoformat(),
+            'log_type': 'INFO',
+            'message': f'配置紧急协议: {protocol["name"]}',
+            'ai_decision': 'AI已注册新协议'
+        }
+        logs.insert(0, log_entry)
+        
+        return {'success': True, 'protocol': protocol}
+    
+    def trigger_emergency_manual(self, level='warning'):
+        """手动触发紧急协议"""
+        state, logs = get_persistent_state()
+        
+        log_entry = {
+            'timestamp': datetime.datetime.utcnow().isoformat(),
+            'log_type': 'CRITICAL',
+            'message': f'⚠️ 手动触发紧急协议 (等级: {level})',
+            'ai_decision': 'AI正在执行紧急响应流程'
+        }
+        logs.insert(0, log_entry)
+        
+        # 根据等级调整状态
+        if level == 'critical':
+            state['survival_index'] = max(0, state['survival_index'] - 20)
+            state['energy_level'] = max(0, state['energy_level'] - 15)
+        elif level == 'warning':
+            state['survival_index'] = max(0, state['survival_index'] - 10)
+        
+        return {
+            'success': True,
+            'level': level,
+            'new_status': self.get_current_status()
+        }
+    
+    # ==================== 宇航员管理 ====================
+    
+    def add_crew_member(self, member_data):
+        """添加宇航员"""
+        state, logs = get_persistent_state()
+        
+        new_member = {
+            'id': len(state['crew_members']) + 1,
+            'name': member_data.get('name', '未知'),
+            'weight': float(member_data.get('weight', 70)),
+            'age': int(member_data.get('age', 30)),
+            'health_status': member_data.get('health_status', 'good'),
+            'special_needs': member_data.get('special_needs', []),
+            'calorie_needs': int(member_data.get('calorie_needs', 2500)),
+            'diet_requirements': member_data.get('diet_requirements', []),
+            'allergies': member_data.get('allergies', [])
+        }
+        
+        state['crew_members'].append(new_member)
+        state['crew_count'] = len(state['crew_members'])
+        
+        log_entry = {
+            'timestamp': datetime.datetime.utcnow().isoformat(),
+            'log_type': 'INFO',
+            'message': f'添加宇航员: {new_member["name"]}',
+            'ai_decision': 'AI已更新人员配置'
+        }
+        logs.insert(0, log_entry)
+        
+        return {'success': True, 'member': new_member}
+    
+    def remove_crew_member(self, member_id):
+        """移除宇航员"""
+        state, logs = get_persistent_state()
+        
+        removed = None
+        remaining = []
+        for member in state['crew_members']:
+            if member['id'] == member_id:
+                removed = member
+            else:
+                remaining.append(member)
+        
+        if removed:
+            state['crew_members'] = remaining
+            state['crew_count'] = len(remaining)
+            
+            log_entry = {
+                'timestamp': datetime.datetime.utcnow().isoformat(),
+                'log_type': 'WARNING',
+                'message': f'移除宇航员: {removed["name"]}',
+                'ai_decision': 'AI已更新人员配置'
+            }
+            logs.insert(0, log_entry)
+            
+            return {'success': True, 'removed': removed}
+        
+        return {'success': False, 'error': '宇航员不存在'}
+    
+    # ==================== 通信与日志 ====================
+    
+    def add_manual_log(self, log_data):
+        """添加手动日志"""
+        state, _ = get_persistent_state()
+        
+        new_log = {
+            'id': len(state['manual_logs']) + 1,
+            'timestamp': datetime.datetime.utcnow().isoformat(),
+            'type': log_data.get('type', 'observation'),  # event/observation/anomaly
+            'content': log_data.get('content', ''),
+            'author': log_data.get('author', '系统')
+        }
+        
+        state['manual_logs'].insert(0, new_log)
+        
+        return {'success': True, 'log': new_log}
+    
+    def generate_custom_report(self, report_type='daily', depth='standard', focus_areas=None):
+        """生成自定义报告"""
+        state, _ = get_persistent_state()
+        
+        if focus_areas is None:
+            focus_areas = ['survival', 'resources']
+        
+        status = self.get_current_status()
+        
+        report = f"=== {report_type.upper()} REPORT ===\n"
+        report += f"生成时间: {datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}\n"
+        report += f"深度: {depth}\n\n"
+        
+        if 'survival' in focus_areas:
+            report += f"生存指数: {status['survival_index']:.1f}%\n"
+            report += f"预计生存天数: {status['estimated_survival_days']}天\n"
+            report += f"任务天数: {status['mission_day']}\n\n"
+        
+        if 'resources' in focus_areas:
+            report += f"食物稳定性: {status['food_stability']:.1f}%\n"
+            report += f"能源水平: {status['energy_level']:.1f}%\n"
+            report += f"医疗安全性: {status['medical_safety']:.1f}%\n"
+            report += f"氧气水平: {status['oxygen_level']:.1f}%\n\n"
+        
+        if 'crew' in focus_areas:
+            report += f"宇航员人数: {status['crew_count']}\n"
+            report += f"人员列表: {', '.join([m['name'] for m in state['crew_members']])}\n\n"
+        
+        return {'success': True, 'report': report}
 
 # 全局实例
 engine = AISurvivalEngine()
