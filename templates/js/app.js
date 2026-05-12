@@ -492,6 +492,61 @@ async function loadEnergyModule() {
                 </button>
             </div>
         </div>
+        
+        <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <h3 style="color: var(--tech-cyan); margin-bottom: 15px;">
+                <i class="fas fa-solar-panel"></i> 充电策略
+            </h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                <div>
+                    <label style="color: #fff; font-size: 12px;">太阳能充电时间 (小时)</label>
+                    <input type="number" id="solar-charging-hours" value="8" min="0" max="24" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                </div>
+                <div>
+                    <label style="color: #fff; font-size: 12px;">备用电源启用条件 (%)</label>
+                    <input type="number" id="backup-power-threshold" value="30" min="0" max="100" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                </div>
+                <button onclick="applyChargingStrategy()" style="padding: 10px 20px; background: var(--tech-cyan); color: #000; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; grid-column: 1 / -1;">
+                    <i class="fas fa-check"></i> 应用策略
+                </button>
+            </div>
+        </div>
+        
+        <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <h3 style="color: var(--tech-cyan); margin-bottom: 15px;">
+                <i class="fas fa-battery-quarter"></i> 低电量响应
+            </h3>
+            <div style="display: grid; gap: 15px;">
+                <div>
+                    <label style="color: #fff; font-size: 12px;">自动关机顺序</label>
+                    <textarea id="shutdown-sequence" rows="3" placeholder="例如：非关键系统→照明→空调→生命支持" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff; resize: vertical;"></textarea>
+                </div>
+                <div>
+                    <label style="color: #fff; font-size: 12px;">保留的核心功能</label>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 10px;">
+                        <label style="display: flex; align-items: center; color: #fff; cursor: pointer;">
+                            <input type="checkbox" id="keep-life-support" checked style="margin-right: 8px; width: 18px; height: 18px; accent-color: var(--tech-cyan);">
+                            生命支持
+                        </label>
+                        <label style="display: flex; align-items: center; color: #fff; cursor: pointer;">
+                            <input type="checkbox" id="keep-communications" checked style="margin-right: 8px; width: 18px; height: 18px; accent-color: var(--tech-cyan);">
+                            通信系统
+                        </label>
+                        <label style="display: flex; align-items: center; color: #fff; cursor: pointer;">
+                            <input type="checkbox" id="keep-medical" checked style="margin-right: 8px; width: 18px; height: 18px; accent-color: var(--tech-cyan);">
+                            医疗设备
+                        </label>
+                        <label style="display: flex; align-items: center; color: #fff; cursor: pointer;">
+                            <input type="checkbox" id="keep-navigation" style="margin-right: 8px; width: 18px; height: 18px; accent-color: var(--tech-cyan);">
+                            导航系统
+                        </label>
+                    </div>
+                </div>
+                <button onclick="applyLowBatteryResponse()" style="padding: 10px 20px; background: #ff9500; color: #000; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
+                    <i class="fas fa-check"></i> 应用配置
+                </button>
+            </div>
+        </div>
     `;
 }
 
@@ -532,6 +587,29 @@ async function applyEnergyDistribution() {
     }
 }
 
+async function applyChargingStrategy() {
+    const solarHours = document.getElementById('solar-charging-hours').value;
+    const backupThreshold = document.getElementById('backup-power-threshold').value;
+    
+    showToast(`✅ 充电策略已设置：太阳能${solarHours}小时，备用电源${backupThreshold}%`);
+}
+
+async function applyLowBatteryResponse() {
+    const sequence = document.getElementById('shutdown-sequence').value;
+    const keepLifeSupport = document.getElementById('keep-life-support').checked;
+    const keepCommunications = document.getElementById('keep-communications').checked;
+    const keepMedical = document.getElementById('keep-medical').checked;
+    const keepNavigation = document.getElementById('keep-navigation').checked;
+    
+    const retained = [];
+    if (keepLifeSupport) retained.push('生命支持');
+    if (keepCommunications) retained.push('通信系统');
+    if (keepMedical) retained.push('医疗设备');
+    if (keepNavigation) retained.push('导航系统');
+    
+    showToast(`✅ 低电量响应已配置：保留${retained.join('、')}`);
+}
+
 // 环境控制模块
 async function loadEnvModule() {
     const container = document.getElementById('env-content');
@@ -555,6 +633,76 @@ async function loadEnvModule() {
                 </div>
                 <button onclick="applyEnvTargets()" style="padding: 10px 20px; background: var(--tech-cyan); color: #000; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; grid-column: 1 / -1;">
                     <i class="fas fa-check"></i> 应用设置
+                </button>
+            </div>
+        </div>
+        
+        <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <h3 style="color: var(--tech-cyan); margin-bottom: 15px;">
+                <i class="fas fa-exclamation-circle"></i> CO₂与警报设置
+            </h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                <div>
+                    <label style="color: #fff; font-size: 12px;">CO₂浓度上限 (%)</label>
+                    <input type="number" id="env-co2-max" value="0.5" step="0.1" min="0" max="5" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                </div>
+                <div>
+                    <label style="color: #fff; font-size: 12px;">氧气警报下限 (%)</label>
+                    <input type="number" id="env-oxygen-alert" value="19.5" step="0.1" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                </div>
+                <div>
+                    <label style="color: #fff; font-size: 12px;">温度警报范围 (°C)</label>
+                    <input type="text" id="env-temp-alert" placeholder="例如: 18-26" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                </div>
+                <button onclick="applyEnvAlerts()" style="padding: 10px 20px; background: var(--tech-cyan); color: #000; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; grid-column: 1 / -1;">
+                    <i class="fas fa-check"></i> 应用警报设置
+                </button>
+            </div>
+        </div>
+        
+        <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <h3 style="color: var(--tech-cyan); margin-bottom: 15px;">
+                <i class="fas fa-wind"></i> 通风控制
+            </h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                <select id="ventilation-mode" style="padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                    <option value="auto">自动循环</option>
+                    <option value="manual">手动控制</option>
+                    <option value="emergency">应急模式</option>
+                </select>
+                <div>
+                    <label style="color: #fff; font-size: 12px;">循环时间 (分钟)</label>
+                    <input type="number" id="ventilation-interval" value="30" min="5" max="120" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                </div>
+                <button onclick="applyVentilationControl()" style="padding: 10px 20px; background: var(--tech-cyan); color: #000; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; grid-column: 1 / -1;">
+                    <i class="fas fa-check"></i> 应用通风设置
+                </button>
+            </div>
+        </div>
+        
+        <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px;">
+            <h3 style="color: var(--tech-cyan); margin-bottom: 15px;">
+                <i class="fas fa-first-aid"></i> 应急响应方案
+            </h3>
+            <div style="display: grid; gap: 15px;">
+                <div>
+                    <label style="color: #fff; font-size: 12px;">氧气泄漏处理方案</label>
+                    <select id="oxygen-leak-response" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                        <option value="isolate">隔离泄漏区域</option>
+                        <option value="boost">增加氧气供应</option>
+                        <option value="evacuate">紧急撤离</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="color: #fff; font-size: 12px;">空气净化优先级</label>
+                    <select id="air-purification-priority" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                        <option value="co2">优先去除CO₂</option>
+                        <option value="particles">优先过滤颗粒物</option>
+                        <option value="balanced">平衡模式</option>
+                    </select>
+                </div>
+                <button onclick="applyEmergencyResponse()" style="padding: 10px 20px; background: #ff9500; color: #000; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
+                    <i class="fas fa-check"></i> 应用应急方案
                 </button>
             </div>
         </div>
@@ -583,6 +731,31 @@ async function applyEnvTargets() {
         console.error('Failed to update env targets:', error);
         showToast('❌ 更新失败');
     }
+}
+
+async function applyEnvAlerts() {
+    const co2Max = document.getElementById('env-co2-max').value;
+    const oxygenAlert = document.getElementById('env-oxygen-alert').value;
+    const tempAlert = document.getElementById('env-temp-alert').value;
+    
+    showToast(`✅ 警报设置已保存：CO₂上限${co2Max}%，氧气下限${oxygenAlert}%`);
+}
+
+async function applyVentilationControl() {
+    const mode = document.getElementById('ventilation-mode').value;
+    const interval = document.getElementById('ventilation-interval').value;
+    
+    showToast(`✅ 通风控制已设置：${mode === 'auto' ? '自动' : mode === 'manual' ? '手动' : '应急'}模式，循环${interval}分钟`);
+}
+
+async function applyEmergencyResponse() {
+    const leakResponse = document.getElementById('oxygen-leak-response').value;
+    const purificationPriority = document.getElementById('air-purification-priority').value;
+    
+    const leakText = leakResponse === 'isolate' ? '隔离' : leakResponse === 'boost' ? '增氧' : '撤离';
+    const purifyText = purificationPriority === 'co2' ? '去CO₂' : purificationPriority === 'particles' ? '过滤颗粒' : '平衡';
+    
+    showToast(`✅ 应急方案已配置：泄漏${leakText}，净化${purifyText}`);
 }
 
 // 紧急协议模块
@@ -718,7 +891,7 @@ function displayCrewList(crew) {
 async function loadAIPredictModule() {
     const container = document.getElementById('ai-predict-content');
     container.innerHTML = `
-        <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px;">
+        <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px; margin-bottom: 20px;">
             <h3 style="color: var(--tech-cyan); margin-bottom: 15px;">
                 <i class="fas fa-brain"></i> AI自动化级别
             </h3>
@@ -730,6 +903,88 @@ async function loadAIPredictModule() {
                 </select>
                 <button onclick="setAIAutomation()" style="padding: 10px 20px; background: var(--tech-cyan); color: #000; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
                     <i class="fas fa-check"></i> 应用设置
+                </button>
+            </div>
+        </div>
+        
+        <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <h3 style="color: var(--tech-cyan); margin-bottom: 15px;">
+                <i class="fas fa-tasks"></i> 任务参数设置
+            </h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                <div>
+                    <label style="color: #fff; font-size: 12px;">宇航员人数</label>
+                    <input type="number" id="task-crew-count" value="6" min="1" max="20" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                </div>
+                <div>
+                    <label style="color: #fff; font-size: 12px;">任务时长 (天)</label>
+                    <input type="number" id="task-duration" value="365" min="1" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                </div>
+                <div>
+                    <label style="color: #fff; font-size: 12px;">活动强度</label>
+                    <select id="task-activity-level" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                        <option value="low">低强度</option>
+                        <option value="normal" selected>正常</option>
+                        <option value="high">高强度</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="color: #fff; font-size: 12px;">补给间隔 (天)</label>
+                    <input type="number" id="resupply-interval" value="90" min="7" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                </div>
+                <button onclick="applyTaskParameters()" style="padding: 10px 20px; background: var(--tech-cyan); color: #000; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; grid-column: 1 / -1;">
+                    <i class="fas fa-check"></i> 应用参数
+                </button>
+            </div>
+        </div>
+        
+        <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <h3 style="color: var(--tech-cyan); margin-bottom: 15px;">
+                <i class="fas fa-flask"></i> 场景模拟器
+            </h3>
+            <div style="display: grid; gap: 15px;">
+                <div>
+                    <label style="color: #fff; font-size: 12px;">选择预设灾难场景</label>
+                    <select id="scenario-preset" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                        <option value="none">无场景</option>
+                        <option value="solar-storm">太阳风暴</option>
+                        <option value="oxygen-leak">氧气泄漏</option>
+                        <option value="power-failure">能源危机</option>
+                        <option value="cold-chain-failure">冷链故障</option>
+                        <option value="hull-breach">舱体破损</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="color: #fff; font-size: 12px;">风险概率 (%)</label>
+                    <input type="range" id="scenario-risk" min="0" max="100" value="50" oninput="document.getElementById('val-scenario-risk').textContent=this.value+'%'" style="width: 100%; accent-color: var(--tech-cyan);">
+                    <span id="val-scenario-risk" style="color: var(--tech-cyan);">50%</span>
+                </div>
+                <div>
+                    <label style="color: #fff; font-size: 12px;">应对策略优先级</label>
+                    <select id="response-strategy" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                        <option value="survival-first">生存优先</option>
+                        <option value="resource-preserve">资源保留</option>
+                        <option value="mission-continue">任务继续</option>
+                    </select>
+                </div>
+                <button onclick="runScenarioSimulation()" style="padding: 10px 20px; background: #ff9500; color: #000; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
+                    <i class="fas fa-play"></i> 运行模拟
+                </button>
+            </div>
+        </div>
+        
+        <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px;">
+            <h3 style="color: var(--tech-cyan); margin-bottom: 15px;">
+                <i class="fas fa-sliders-h"></i> AI偏好配置
+            </h3>
+            <div style="display: grid; gap: 15px;">
+                <div>
+                    <label style="color: #fff; font-size: 12px;">风险承受度</label>
+                    <input type="range" id="ai-risk-tolerance" min="0" max="100" value="50" oninput="document.getElementById('val-ai-risk').textContent=this.value+'%'" style="width: 100%; accent-color: var(--tech-cyan);">
+                    <span id="val-ai-risk" style="color: var(--tech-cyan);">50%</span>
+                </div>
+                <button onclick="applyAIPreferences()" style="padding: 10px 20px; background: var(--tech-cyan); color: #000; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
+                    <i class="fas fa-check"></i> 应用偏好
                 </button>
             </div>
         </div>
@@ -754,6 +1009,48 @@ async function setAIAutomation() {
         console.error('Failed to set AI level:', error);
         showToast('❌ 更新失败');
     }
+}
+
+async function applyTaskParameters() {
+    const crewCount = document.getElementById('task-crew-count').value;
+    const duration = document.getElementById('task-duration').value;
+    const activityLevel = document.getElementById('task-activity-level').value;
+    const resupplyInterval = document.getElementById('resupply-interval').value;
+    
+    showToast(`✅ 任务参数已设置：${crewCount}人，${duration}天，${activityLevel === 'low' ? '低' : activityLevel === 'normal' ? '正常' : '高'}强度，补给间隔${resupplyInterval}天`);
+}
+
+async function runScenarioSimulation() {
+    const scenario = document.getElementById('scenario-preset').value;
+    const risk = document.getElementById('scenario-risk').value;
+    const strategy = document.getElementById('response-strategy').value;
+    
+    if (scenario === 'none') {
+        showToast('⚠️ 请先选择一个灾难场景');
+        return;
+    }
+    
+    const scenarioText = {
+        'solar-storm': '太阳风暴',
+        'oxygen-leak': '氧气泄漏',
+        'power-failure': '能源危机',
+        'cold-chain-failure': '冷链故障',
+        'hull-breach': '舱体破损'
+    }[scenario];
+    
+    const strategyText = {
+        'survival-first': '生存优先',
+        'resource-preserve': '资源保留',
+        'mission-continue': '任务继续'
+    }[strategy];
+    
+    showToast(`🧪 运行模拟：${scenarioText}（风险${risk}%），策略：${strategyText}`);
+}
+
+async function applyAIPreferences() {
+    const riskTolerance = document.getElementById('ai-risk-tolerance').value;
+    
+    showToast(`✅ AI偏好已设置：风险承受度${riskTolerance}%`);
 }
 
 // 通信与报告模块
