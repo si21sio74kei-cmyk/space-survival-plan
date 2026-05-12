@@ -47,16 +47,16 @@ DeepSpace AI Survival Cold-Chain Decision System - Mars Habitat Control Platform
 ### 后端启动
 ```powershell
 cd backend
-..\venv\Scripts\python.exe main.py
+python SpaceSurvivalSystem.py
 ```
 
 ### 前端启动
 ```powershell
 cd frontend
-python -m http.server 5500
+python -m http.server 3000
 ```
 
-访问：http://localhost:5500/index.html
+访问：http://localhost:3000
 
 ## Vercel 部署
 
