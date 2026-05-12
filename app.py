@@ -16,8 +16,8 @@ if current_dir not in sys.path:
 from ai_engine import engine as ai_engine
 
 app = Flask(__name__, 
-            template_folder='frontend',
-            static_folder='frontend',
+            template_folder='templates',
+            static_folder='templates',
             static_url_path='')
 
 # Vercel Serverless架构：每次请求时自动执行模拟
