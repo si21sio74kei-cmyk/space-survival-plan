@@ -372,6 +372,53 @@ class AISurvivalEngine:
             "estimated_survival_days": int(status['survival_index'] * 1.5),
             "logs": event_log
         }
+    
+    def adjust_parameters(self, adjustments):
+        """手动调整系统参数（用户自定义输入）"""
+        state, logs = get_persistent_state()
+        
+        # 可调整的参数列表
+        valid_params = [
+            'food_stability', 'energy_level', 'medical_safety', 'oxygen_level',
+            'protein_level', 'water_reserve', 'humidity', 'pressure',
+            'backup_power_hours', 'co2_level', 'radiation_level'
+        ]
+        
+        adjusted = []
+        for key, value in adjustments.items():
+            if key in valid_params:
+                try:
+                    old_value = state.get(key, 0)
+                    state[key] = float(value)
+                    adjusted.append(f"{key}: {old_value:.1f} -> {value:.1f}")
+                except (ValueError, TypeError):
+                    pass
+        
+        if adjusted:
+            # 记录日志
+            log_entry = {
+                'timestamp': datetime.datetime.utcnow().isoformat(),
+                'log_type': 'INFO',
+                'message': f'用户手动调整参数: {", ".join(adjusted)}',
+                'ai_decision': 'AI已接受用户输入并重新计算系统状态'
+            }
+            logs.insert(0, log_entry)
+            
+            # 重新计算相关指标
+            state['base_stability'] = (state['energy_level'] + state['food_stability'] + state['medical_safety']) / 3
+            state['environment_score'] = (state['oxygen_level'] + state['humidity'] * 2 + state['pressure']) / 3
+            state['survival_index'] = (
+                state['food_stability'] * 0.25 +
+                state['energy_level'] * 0.25 +
+                state['medical_safety'] * 0.25 +
+                state['oxygen_level'] * 0.25
+            )
+        
+        return {
+            'success': True,
+            'adjusted': adjusted,
+            'new_status': self.get_current_status()
+        }
 
 # 全局实例
 engine = AISurvivalEngine()

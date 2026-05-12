@@ -102,6 +102,13 @@ def emergency_protocol():
     result = ai_engine.trigger_emergency(level)
     return jsonify(result)
 
+@app.route('/api/adjust-parameters', methods=['POST'])
+def adjust_parameters():
+    """手动调整系统参数（用户自定义输入）"""
+    data = request.get_json() or {}
+    result = ai_engine.adjust_parameters(data)
+    return jsonify(result)
+
 # ==================== 本地运行 ====================
 
 if __name__ == '__main__':
