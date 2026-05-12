@@ -2,7 +2,15 @@ import random
 import datetime
 import json
 import os
+import sys
 from zhipuai import ZhipuAI
+
+# 添加父目录到路径以导入config
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
+
 from config import ZHIPU_API_KEY
 
 # 延迟初始化client，避免API KEY为空时失败
