@@ -1,8 +1,6 @@
-// API通信模块 - 负责与后端FastAPI通信
-// 本地开发时使用localhost，生产环境使用相对路径
-const API_BASE = window.location.hostname === 'localhost' 
-    ? 'http://localhost:8001/api' 
-    : '/api';
+// API通信模块 - 负责与后端Flask通信
+// Vercel部署时使用相对路径
+const API_BASE = '/api';
 
 async function fetchSurvivalStatus() {
     try {
@@ -20,7 +18,7 @@ async function fetchSurvivalStatus() {
 
 async function fetchFoodSystem() {
     try {
-        const response = await fetch(`${API_BASE}/food-system`);
+        const response = await fetch(`${API_BASE}/food-inventory`);
         return await response.json();
     } catch (error) {
         console.error('Failed to fetch food system:', error);
@@ -30,7 +28,7 @@ async function fetchFoodSystem() {
 
 async function fetchMedicalSystem() {
     try {
-        const response = await fetch(`${API_BASE}/medical-system`);
+        const response = await fetch(`${API_BASE}/medical-status`);
         return await response.json();
     } catch (error) {
         console.error('Failed to fetch medical system:', error);
@@ -40,7 +38,7 @@ async function fetchMedicalSystem() {
 
 async function fetchEnvironment() {
     try {
-        const response = await fetch(`${API_BASE}/environment`);
+        const response = await fetch(`${API_BASE}/environment-status`);
         return await response.json();
     } catch (error) {
         console.error('Failed to fetch environment:', error);
@@ -50,7 +48,7 @@ async function fetchEnvironment() {
 
 async function fetchEnergy() {
     try {
-        const response = await fetch(`${API_BASE}/energy`);
+        const response = await fetch(`${API_BASE}/energy-status`);
         return await response.json();
     } catch (error) {
         console.error('Failed to fetch energy:', error);
@@ -70,9 +68,10 @@ async function fetchAILogs() {
 
 async function triggerAIAnalysis() {
     try {
-        const response = await fetch(`${API_BASE}/ai-analysis`, {
+        const response = await fetch(`${API_BASE}/generate-report`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'daily' })
         });
         return await response.json();
     } catch (error) {

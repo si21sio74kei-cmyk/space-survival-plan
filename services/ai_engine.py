@@ -303,6 +303,14 @@ class AISurvivalEngine:
             status['water_reserve'] * 0.1
         )
         
+        # 生成预测时间线（基于当前状态推演）
+        predictions = [
+            max(0, int(status['survival_index'] * 0.9)),
+            max(0, int(status['survival_index'] * 0.75)),
+            max(0, int(status['survival_index'] * 0.6)),
+            max(0, int(status['survival_index'] * 0.45))
+        ]
+        
         # 5. 调用 GLM-4-AIR 进行真实 AI 决策
         ai_advice, ai_action_taken = self.analyze_with_ai(status)
         
@@ -340,6 +348,8 @@ class AISurvivalEngine:
             "crew_count": status['crew_count'],
             "diet_advice": diet_advice,
             "emergency_mode": emergency_mode,
+            "predictions": predictions,
+            "estimated_survival_days": int(status['survival_index'] * 1.5),
             "logs": event_log
         }
 
