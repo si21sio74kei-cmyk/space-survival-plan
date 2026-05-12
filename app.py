@@ -13,7 +13,7 @@ if current_dir not in sys.path:
     sys.path.insert(0, current_dir)
 
 # 导入AI引擎
-from services.ai_engine import engine as ai_engine
+from ai_engine import engine as ai_engine
 
 app = Flask(__name__, 
             template_folder='frontend',
