@@ -49,7 +49,112 @@ class AISurvivalEngine:
     def get_current_status(self):
         """获取当前生存状态（Vercel兼容 - 使用内存存储）"""
         state, logs = get_persistent_state()
-        return state
+        # 添加额外字段
+        status = state.copy()
+        status['base_stability'] = (status['energy_level'] + status['food_stability'] + status['medical_safety']) / 3
+        status['environment_score'] = (status['oxygen_level'] + status['humidity'] * 2 + status['pressure']) / 3
+        status['estimated_survival_days'] = int(status['survival_index'] * 1.5)
+        return status
+
+    def get_food_inventory(self):
+        """获取食物库存"""
+        state, _ = get_persistent_state()
+        return {
+            'total_stability': round(state['food_stability'], 1),
+            'protein_level': round(state['protein_level'], 1),
+            'water_reserve': round(state['water_reserve'], 1),
+            'categories': [
+                {'name': '蛋白质储备', 'value': round(state['protein_level'], 1), 'unit': '%'},
+                {'name': '水资源', 'value': round(state['water_reserve'], 1), 'unit': '%'},
+                {'name': '冷冻食品', 'value': round(state['food_stability'] * 0.6, 1), 'unit': '%'},
+                {'name': '脱水食品', 'value': round(state['food_stability'] * 0.4, 1), 'unit': '%'}
+            ]
+        }
+
+    def get_medical_status(self):
+        """获取医疗状态"""
+        state, _ = get_persistent_state()
+        return {
+            'safety_level': round(state['medical_safety'], 1),
+            'temperature': state['medical_temp'],
+            'supplies': round(state['medical_safety'], 1),
+            'items': [
+                {'name': '疫苗冷藏库', 'temp': state['medical_temp'], 'status': '正常' if state['medical_temp'] < -60 else '警告'},
+                {'name': '血浆储存', 'temp': state['medical_temp'] + 5, 'status': '正常'},
+                {'name': '药品柜', 'temp': 4, 'status': '正常'}
+            ]
+        }
+
+    def get_energy_status(self):
+        """获取能源状态"""
+        state, _ = get_persistent_state()
+        return {
+            'level': round(state['energy_level'], 1),
+            'backup_hours': round(state['backup_power_hours'], 1),
+            'consumption_rate': 0.5,
+            'sources': [
+                {'name': '主反应堆', 'value': round(state['energy_level'] * 0.7, 1)},
+                {'name': '太阳能板', 'value': round(state['energy_level'] * 0.2, 1)},
+                {'name': '备用电池', 'value': round(state['energy_level'] * 0.1, 1)}
+            ]
+        }
+
+    def get_environment_status(self):
+        """获取环境状态"""
+        state, _ = get_persistent_state()
+        return {
+            'oxygen': round(state['oxygen_level'], 1),
+            'co2': state['co2_level'],
+            'radiation': round(state['radiation_level'], 1),
+            'humidity': round(state['humidity'], 1),
+            'pressure': round(state['pressure'], 1),
+            'temperature': 22
+        }
+
+    def get_recent_logs(self, limit=20):
+        """获取最近的AI日志"""
+        _, logs = get_persistent_state()
+        return logs[-limit:]
+
+    def generate_report(self, report_type='daily'):
+        """生成AI报告"""
+        state, logs = get_persistent_state()
+        return {
+            'type': report_type,
+            'mission_day': state['mission_day'],
+            'summary': f'任务第{state["mission_day"]}天，系统运行基本稳定',
+            'recommendations': [
+                '继续监控能源消耗',
+                '保持医疗冷链温度',
+                '优化营养配给方案'
+            ],
+            'timestamp': datetime.datetime.utcnow().isoformat()
+        }
+
+    def trigger_emergency(self, level='warning'):
+        """触发紧急协议"""
+        state, logs = get_persistent_state()
+        
+        emergency_messages = {
+            'warning': '启动黄色预警协议',
+            'critical': '启动红色紧急协议',
+            'emergency': '启动最高级别应急响应'
+        }
+        
+        message = emergency_messages.get(level, '启动预警协议')
+        
+        logs.append({
+            'timestamp': datetime.datetime.utcnow().isoformat(),
+            'log_type': 'CRITICAL',
+            'message': message,
+            'ai_decision': f'AI已触发{level}级别紧急协议'
+        })
+        
+        return {
+            'status': 'activated',
+            'level': level,
+            'message': message
+        }
 
     def analyze_with_ai(self, status):
         """调用GLM-4 AI分析当前状态并返回决策"""

@@ -6,8 +6,12 @@ const API_BASE = window.location.hostname === 'localhost'
 
 async function fetchSurvivalStatus() {
     try {
+        console.log('Fetching from:', `${API_BASE}/survival-status`);
         const response = await fetch(`${API_BASE}/survival-status`);
-        return await response.json();
+        console.log('Response status:', response.status);
+        const data = await response.json();
+        console.log('Received data:', data);
+        return data;
     } catch (error) {
         console.error('Failed to fetch survival status:', error);
         return null;
