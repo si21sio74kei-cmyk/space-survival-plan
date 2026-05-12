@@ -1,5 +1,8 @@
 // API通信模块 - 负责与后端FastAPI通信
-const API_BASE = 'http://localhost:8001/api';
+// 本地开发时使用localhost，生产环境使用相对路径
+const API_BASE = window.location.hostname === 'localhost' 
+    ? 'http://localhost:8001/api' 
+    : '/api';
 
 async function fetchSurvivalStatus() {
     try {
