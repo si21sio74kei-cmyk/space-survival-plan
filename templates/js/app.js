@@ -205,12 +205,35 @@ async function loadFoodModule() {
             </div>
         </div>
         
-        <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px;">
+        <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px; margin-bottom: 20px;">
             <h3 style="color: var(--tech-cyan); margin-bottom: 15px;">
                 <i class="fas fa-list"></i> 库存列表
             </h3>
             <div id="food-inventory-list" style="max-height: 300px; overflow-y: auto;">
                 <p style="color: #888;">加载中...</p>
+            </div>
+        </div>
+        
+        <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px;">
+            <h3 style="color: var(--tech-cyan); margin-bottom: 15px;">
+                <i class="fas fa-thermometer-half"></i> 保鲜温度区域
+            </h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                <div>
+                    <label style="color: #fff; font-size: 12px;">冷冻区 (°C)</label>
+                    <input type="number" id="food-zone1-temp" value="-18" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                </div>
+                <div>
+                    <label style="color: #fff; font-size: 12px;">冷藏区 (°C)</label>
+                    <input type="number" id="food-zone2-temp" value="4" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                </div>
+                <div>
+                    <label style="color: #fff; font-size: 12px;">深冷区 (°C)</label>
+                    <input type="number" id="food-zone3-temp" value="-70" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                </div>
+                <button onclick="updateFoodZones()" style="padding: 10px 20px; background: var(--tech-cyan); color: #000; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; grid-column: 1 / -1;">
+                    <i class="fas fa-check"></i> 应用温度设置
+                </button>
             </div>
         </div>
     `;
@@ -302,6 +325,14 @@ async function updateFoodWarnings() {
     const minStock = document.getElementById('food-min-stock').value;
     
     showToast(`✅ 预警设置已保存：过期${expiryWarning}天，最低库存${minStock}%`);
+}
+
+function updateFoodZones() {
+    const zone1 = document.getElementById('food-zone1-temp').value;
+    const zone2 = document.getElementById('food-zone2-temp').value;
+    const zone3 = document.getElementById('food-zone3-temp').value;
+    
+    showToast(`✅ 温度区域已设置：冷冻${zone1}°C, 冷藏${zone2}°C, 深冷${zone3}°C`);
 }
 
 function displayFoodInventory(data) {
