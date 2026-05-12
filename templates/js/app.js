@@ -81,8 +81,554 @@ function switchView(module) {
             setTimeout(() => {
                 targetView.style.opacity = '1';
             }, 50);
+            
+            // 加载模块内容
+            loadModuleContent(module);
         }
     }, 300);
+}
+
+// 加载模块内容
+async function loadModuleContent(module) {
+    switch(module) {
+        case 'food':
+            await loadFoodModule();
+            break;
+        case 'medical':
+            await loadMedicalModule();
+            break;
+        case 'energy':
+            await loadEnergyModule();
+            break;
+        case 'env':
+            await loadEnvModule();
+            break;
+        case 'emergency':
+            await loadEmergencyModule();
+            break;
+        case 'crew':
+            await loadCrewModule();
+            break;
+        case 'ai-predict':
+            await loadAIPredictModule();
+            break;
+        case 'communication':
+            await loadCommunicationModule();
+            break;
+        case 'settings':
+            await loadSettingsModule();
+            break;
+    }
+}
+
+// 食物资源模块
+async function loadFoodModule() {
+    const container = document.getElementById('food-content');
+    container.innerHTML = `
+        <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <h3 style="color: var(--tech-cyan); margin-bottom: 15px;">
+                <i class="fas fa-plus-circle"></i> 添加食物
+            </h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                <input type="text" id="food-name" placeholder="食物名称" style="padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                <input type="number" id="food-quantity" placeholder="数量" style="padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                <select id="food-nutrition" style="padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                    <option value="protein">蛋白质</option>
+                    <option value="carb">碳水化合物</option>
+                    <option value="fat">脂肪</option>
+                    <option value="vitamin">维生素</option>
+                </select>
+                <button onclick="addFoodItem()" style="padding: 10px 20px; background: var(--tech-cyan); color: #000; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
+                    <i class="fas fa-plus"></i> 添加
+                </button>
+            </div>
+        </div>
+        
+        <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px;">
+            <h3 style="color: var(--tech-cyan); margin-bottom: 15px;">
+                <i class="fas fa-list"></i> 库存列表
+            </h3>
+            <div id="food-inventory-list" style="max-height: 300px; overflow-y: auto;">
+                <p style="color: #888;">加载中...</p>
+            </div>
+        </div>
+    `;
+    
+    // 加载库存数据
+    try {
+        const response = await fetch('/api/food-inventory');
+        const data = await response.json();
+        displayFoodInventory(data);
+    } catch (error) {
+        console.error('Failed to load food inventory:', error);
+    }
+}
+
+async function addFoodItem() {
+    const name = document.getElementById('food-name').value;
+    const quantity = document.getElementById('food-quantity').value;
+    const nutrition = document.getElementById('food-nutrition').value;
+    
+    if (!name || !quantity) {
+        showToast('⚠️ 请填写完整信息');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/food/add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, quantity, nutrition_type: nutrition })
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            showToast('✅ 食物添加成功！');
+            loadFoodModule(); // 重新加载
+        }
+    } catch (error) {
+        console.error('Failed to add food:', error);
+        showToast('❌ 添加失败');
+    }
+}
+
+function displayFoodInventory(data) {
+    const list = document.getElementById('food-inventory-list');
+    if (!data || !data.categories || data.categories.length === 0) {
+        list.innerHTML = '<p style="color: #888;">暂无库存数据</p>';
+        return;
+    }
+    
+    list.innerHTML = data.categories.map(cat => `
+        <div style="padding: 10px; margin-bottom: 10px; background: rgba(0,243,255,0.1); border-radius: 5px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <strong style="color: var(--tech-cyan);">${cat.name}</strong>
+                <div style="color: #fff; font-size: 12px;">${cat.value}${cat.unit}</div>
+            </div>
+        </div>
+    `).join('');
+}
+
+// 医疗冷链模块
+async function loadMedicalModule() {
+    const container = document.getElementById('medical-content');
+    container.innerHTML = `
+        <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px;">
+            <h3 style="color: var(--tech-cyan); margin-bottom: 15px;">
+                <i class="fas fa-syringe"></i> 添加医疗物品
+            </h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                <input type="text" id="medical-name" placeholder="物品名称" style="padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                <select id="medical-type" style="padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                    <option value="vaccine">疫苗</option>
+                    <option value="medicine">药品</option>
+                    <option value="sample">生物样本</option>
+                </select>
+                <input type="number" id="medical-temp" placeholder="存储温度 (°C)" style="padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                <button onclick="addMedicalItem()" style="padding: 10px 20px; background: var(--tech-cyan); color: #000; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
+                    <i class="fas fa-plus"></i> 添加
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+async function addMedicalItem() {
+    const name = document.getElementById('medical-name').value;
+    const type = document.getElementById('medical-type').value;
+    const storage_temp = document.getElementById('medical-temp').value;
+    
+    if (!name) {
+        showToast('⚠️ 请输入物品名称');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/medical/add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, type, storage_temp: parseFloat(storage_temp) || -70 })
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            showToast('✅ 医疗物品添加成功！');
+        }
+    } catch (error) {
+        console.error('Failed to add medical item:', error);
+        showToast('❌ 添加失败');
+    }
+}
+
+// 能源管理模块
+async function loadEnergyModule() {
+    const container = document.getElementById('energy-content');
+    container.innerHTML = `
+        <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px;">
+            <h3 style="color: var(--tech-cyan); margin-bottom: 15px;">
+                <i class="fas fa-sliders-h"></i> 能源分配
+            </h3>
+            <div style="display: grid; gap: 15px;">
+                <div>
+                    <label style="color: #fff; font-size: 12px;">医疗区 (%)</label>
+                    <input type="range" id="energy-medical" min="0" max="100" value="30" oninput="updateEnergyDist()" style="width: 100%; accent-color: var(--tech-cyan);">
+                    <span id="val-energy-medical" style="color: var(--tech-cyan);">30%</span>
+                </div>
+                <div>
+                    <label style="color: #fff; font-size: 12px;">食物区 (%)</label>
+                    <input type="range" id="energy-food" min="0" max="100" value="25" oninput="updateEnergyDist()" style="width: 100%; accent-color: var(--tech-cyan);">
+                    <span id="val-energy-food" style="color: var(--tech-cyan);">25%</span>
+                </div>
+                <div>
+                    <label style="color: #fff; font-size: 12px;">环境控制 (%)</label>
+                    <input type="range" id="energy-env" min="0" max="100" value="25" oninput="updateEnergyDist()" style="width: 100%; accent-color: var(--tech-cyan);">
+                    <span id="val-energy-env" style="color: var(--tech-cyan);">25%</span>
+                </div>
+                <div>
+                    <label style="color: #fff; font-size: 12px;">其他系统 (%)</label>
+                    <input type="range" id="energy-other" min="0" max="100" value="20" oninput="updateEnergyDist()" style="width: 100%; accent-color: var(--tech-cyan);">
+                    <span id="val-energy-other" style="color: var(--tech-cyan);">20%</span>
+                </div>
+                <button onclick="applyEnergyDistribution()" style="padding: 10px 20px; background: var(--tech-cyan); color: #000; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 10px;">
+                    <i class="fas fa-check"></i> 应用分配
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+function updateEnergyDist() {
+    ['medical', 'food', 'env', 'other'].forEach(id => {
+        const slider = document.getElementById(`energy-${id}`);
+        const display = document.getElementById(`val-energy-${id}`);
+        if (slider && display) {
+            display.textContent = slider.value + '%';
+        }
+    });
+}
+
+async function applyEnergyDistribution() {
+    const distribution = {
+        medical: parseInt(document.getElementById('energy-medical').value),
+        food: parseInt(document.getElementById('energy-food').value),
+        environment: parseInt(document.getElementById('energy-env').value),
+        other: parseInt(document.getElementById('energy-other').value)
+    };
+    
+    try {
+        const response = await fetch('/api/energy/distribution', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(distribution)
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            showToast('✅ 能源分配已更新！');
+        } else {
+            showToast('❌ ' + result.error);
+        }
+    } catch (error) {
+        console.error('Failed to update energy distribution:', error);
+        showToast('❌ 更新失败');
+    }
+}
+
+// 环境控制模块
+async function loadEnvModule() {
+    const container = document.getElementById('env-content');
+    container.innerHTML = `
+        <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px;">
+            <h3 style="color: var(--tech-cyan); margin-bottom: 15px;">
+                <i class="fas fa-thermometer-half"></i> 环境参数设置
+            </h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                <div>
+                    <label style="color: #fff; font-size: 12px;">氧气浓度目标 (%)</label>
+                    <input type="number" id="env-oxygen" value="21" step="0.1" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                </div>
+                <div>
+                    <label style="color: #fff; font-size: 12px;">温度目标 (°C)</label>
+                    <input type="number" id="env-temp" value="22" step="0.1" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                </div>
+                <div>
+                    <label style="color: #fff; font-size: 12px;">湿度目标 (%)</label>
+                    <input type="number" id="env-humidity" value="45" step="1" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                </div>
+                <button onclick="applyEnvTargets()" style="padding: 10px 20px; background: var(--tech-cyan); color: #000; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; grid-column: 1 / -1;">
+                    <i class="fas fa-check"></i> 应用设置
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+async function applyEnvTargets() {
+    const targets = {
+        oxygen: parseFloat(document.getElementById('env-oxygen').value),
+        temperature: parseFloat(document.getElementById('env-temp').value),
+        humidity: parseFloat(document.getElementById('env-humidity').value)
+    };
+    
+    try {
+        const response = await fetch('/api/environment/targets', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(targets)
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            showToast('✅ 环境参数已更新！');
+        }
+    } catch (error) {
+        console.error('Failed to update env targets:', error);
+        showToast('❌ 更新失败');
+    }
+}
+
+// 紧急协议模块
+async function loadEmergencyModule() {
+    const container = document.getElementById('emergency-content');
+    container.innerHTML = `
+        <div style="background: rgba(255,0,0,0.1); padding: 20px; border-radius: 8px; border: 2px solid rgba(255,0,0,0.3);">
+            <h3 style="color: #ff4d4d; margin-bottom: 15px;">
+                <i class="fas fa-exclamation-triangle"></i> 手动触发紧急协议
+            </h3>
+            <div style="display: grid; gap: 15px;">
+                <select id="emergency-level" style="padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,0,0,0.3); border-radius: 5px; color: #fff;">
+                    <option value="warning">警告 (Warning)</option>
+                    <option value="critical">严重 (Critical)</option>
+                </select>
+                <button onclick="triggerEmergencyManual()" style="padding: 15px 30px; background: #ff4d4d; color: #fff; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 16px;">
+                    <i class="fas fa-bell"></i> 触发紧急协议
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+async function triggerEmergencyManual() {
+    const level = document.getElementById('emergency-level').value;
+    
+    if (!confirm(`确定要触发${level === 'critical' ? '严重' : '警告'}级别紧急协议吗？`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/emergency/trigger-manual', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ level })
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            showToast('⚠️ 紧急协议已触发！');
+            refreshData({ mainChart, gaugeChart, predictionChart });
+        }
+    } catch (error) {
+        console.error('Failed to trigger emergency:', error);
+        showToast('❌ 触发失败');
+    }
+}
+
+// 宇航员管理模块
+async function loadCrewModule() {
+    const container = document.getElementById('crew-content');
+    container.innerHTML = `
+        <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <h3 style="color: var(--tech-cyan); margin-bottom: 15px;">
+                <i class="fas fa-user-plus"></i> 添加宇航员
+            </h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px;">
+                <input type="text" id="crew-name" placeholder="姓名" style="padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                <input type="number" id="crew-age" placeholder="年龄" style="padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                <input type="number" id="crew-weight" placeholder="体重 (kg)" style="padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                <button onclick="addCrewMember()" style="padding: 10px 20px; background: var(--tech-cyan); color: #000; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
+                    <i class="fas fa-plus"></i> 添加
+                </button>
+            </div>
+        </div>
+        
+        <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px;">
+            <h3 style="color: var(--tech-cyan); margin-bottom: 15px;">
+                <i class="fas fa-users"></i> 宇航员列表
+            </h3>
+            <div id="crew-list" style="max-height: 300px; overflow-y: auto;">
+                <p style="color: #888;">加载中...</p>
+            </div>
+        </div>
+    `;
+    
+    // 加载宇航员列表
+    try {
+        const response = await fetch('/api/crew/list');
+        const crew = await response.json();
+        displayCrewList(crew);
+    } catch (error) {
+        console.error('Failed to load crew:', error);
+    }
+}
+
+async function addCrewMember() {
+    const name = document.getElementById('crew-name').value;
+    const age = document.getElementById('crew-age').value;
+    const weight = document.getElementById('crew-weight').value;
+    
+    if (!name) {
+        showToast('⚠️ 请输入姓名');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/crew/add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, age: parseInt(age) || 30, weight: parseFloat(weight) || 70 })
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            showToast('✅ 宇航员添加成功！');
+            loadCrewModule(); // 重新加载
+        }
+    } catch (error) {
+        console.error('Failed to add crew:', error);
+        showToast('❌ 添加失败');
+    }
+}
+
+function displayCrewList(crew) {
+    const list = document.getElementById('crew-list');
+    if (!crew || crew.length === 0) {
+        list.innerHTML = '<p style="color: #888;">暂无宇航员</p>';
+        return;
+    }
+    
+    list.innerHTML = crew.map(member => `
+        <div style="padding: 10px; margin-bottom: 10px; background: rgba(0,243,255,0.1); border-radius: 5px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <strong style="color: var(--tech-cyan);">${member.name}</strong>
+                <div style="color: #fff; font-size: 12px;">年龄: ${member.age} | 体重: ${member.weight}kg</div>
+            </div>
+        </div>
+    `).join('');
+}
+
+// AI预测与决策模块
+async function loadAIPredictModule() {
+    const container = document.getElementById('ai-predict-content');
+    container.innerHTML = `
+        <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px;">
+            <h3 style="color: var(--tech-cyan); margin-bottom: 15px;">
+                <i class="fas fa-brain"></i> AI自动化级别
+            </h3>
+            <div style="display: grid; gap: 15px;">
+                <select id="ai-level" style="padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                    <option value="manual">手动模式</option>
+                    <option value="semi-auto" selected>半自动模式</option>
+                    <option value="full-auto">全自动模式</option>
+                </select>
+                <button onclick="setAIAutomation()" style="padding: 10px 20px; background: var(--tech-cyan); color: #000; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
+                    <i class="fas fa-check"></i> 应用设置
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+async function setAIAutomation() {
+    const level = document.getElementById('ai-level').value;
+    
+    try {
+        const response = await fetch('/api/ai/automation-level', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ level })
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            showToast('✅ AI自动化级别已更新！');
+        }
+    } catch (error) {
+        console.error('Failed to set AI level:', error);
+        showToast('❌ 更新失败');
+    }
+}
+
+// 通信与报告模块
+async function loadCommunicationModule() {
+    const container = document.getElementById('communication-content');
+    container.innerHTML = `
+        <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px;">
+            <h3 style="color: var(--tech-cyan); margin-bottom: 15px;">
+                <i class="fas fa-file-alt"></i> 生成自定义报告
+            </h3>
+            <div style="display: grid; gap: 15px;">
+                <select id="report-type" style="padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                    <option value="daily">每日报告</option>
+                    <option value="weekly">每周报告</option>
+                    <option value="survival">生存状态报告</option>
+                    <option value="risk">风险分析报告</option>
+                </select>
+                <button onclick="generateCustomReport()" style="padding: 10px 20px; background: var(--tech-cyan); color: #000; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
+                    <i class="fas fa-file-export"></i> 生成报告
+                </button>
+                <div id="report-output" style="padding: 15px; background: rgba(0,0,0,0.5); border-radius: 5px; color: #fff; white-space: pre-wrap; min-height: 100px; display: none;"></div>
+            </div>
+        </div>
+    `;
+}
+
+async function generateCustomReport() {
+    const reportType = document.getElementById('report-type').value;
+    const output = document.getElementById('report-output');
+    
+    output.style.display = 'block';
+    output.innerHTML = '<p style="color: var(--tech-cyan);">⏳ 生成中...</p>';
+    
+    try {
+        const response = await fetch('/api/reports/custom', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: reportType, depth: 'standard', focus_areas: ['survival', 'resources', 'crew'] })
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            output.innerHTML = result.report;
+        }
+    } catch (error) {
+        console.error('Failed to generate report:', error);
+        output.innerHTML = '<p style="color: #ff4d4d;">❌ 生成失败</p>';
+    }
+}
+
+// 系统设置模块
+async function loadSettingsModule() {
+    const container = document.getElementById('settings-content');
+    container.innerHTML = `
+        <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px;">
+            <h3 style="color: var(--tech-cyan); margin-bottom: 15px;">
+                <i class="fas fa-cog"></i> 系统设置
+            </h3>
+            <div style="display: grid; gap: 15px;">
+                <div>
+                    <label style="color: #fff; font-size: 12px;">刷新频率 (秒)</label>
+                    <input type="number" id="setting-refresh" value="3" min="1" max="60" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                </div>
+                <button onclick="applySettings()" style="padding: 10px 20px; background: var(--tech-cyan); color: #000; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
+                    <i class="fas fa-check"></i> 保存设置
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+function applySettings() {
+    showToast('✅ 设置已保存（演示功能）');
 }
 
 // 设置滑块输入监听
