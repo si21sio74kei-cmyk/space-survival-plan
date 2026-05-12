@@ -10,6 +10,11 @@ ENV/
 *.db
 survival_system.db
 
+# 旧的文件（已移到backend/）
+app.py
+start.bat
+启动应用.bat
+
 # Node
 node_modules/
 npm-debug.log*
