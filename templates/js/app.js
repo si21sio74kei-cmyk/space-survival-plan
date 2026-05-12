@@ -44,9 +44,12 @@ function setupNavigation() {
             else if (text.includes('能源')) module = 'energy';
             else if (text.includes('环境')) module = 'env';
             else if (text.includes('紧急')) module = 'emergency';
-            else if (text.includes('时间线')) module = 'timeline';
-            else if (text.includes('AI核心')) module = 'ai';
-            else if (text.includes('自定义')) module = 'custom';
+            else if (text.includes('宇航员')) module = 'crew';
+            else if (text.includes('AI预测')) module = 'ai-predict';
+            else if (text.includes('通信')) module = 'communication';
+            else if (text.includes('设置')) module = 'settings';
+            else if (text.includes('AI对话')) module = 'ai';
+            else if (text.includes('参数')) module = 'custom';
             else module = 'dashboard';
             
             currentModule = module;
