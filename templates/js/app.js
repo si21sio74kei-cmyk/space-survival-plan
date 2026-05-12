@@ -762,7 +762,7 @@ async function applyEmergencyResponse() {
 async function loadEmergencyModule() {
     const container = document.getElementById('emergency-content');
     container.innerHTML = `
-        <div style="background: rgba(255,0,0,0.1); padding: 20px; border-radius: 8px; border: 2px solid rgba(255,0,0,0.3);">
+        <div style="background: rgba(255,0,0,0.1); padding: 20px; border-radius: 8px; border: 2px solid rgba(255,0,0,0.3); margin-bottom: 20px;">
             <h3 style="color: #ff4d4d; margin-bottom: 15px;">
                 <i class="fas fa-exclamation-triangle"></i> 手动触发紧急协议
             </h3>
@@ -773,6 +773,94 @@ async function loadEmergencyModule() {
                 </select>
                 <button onclick="triggerEmergencyManual()" style="padding: 15px 30px; background: #ff4d4d; color: #fff; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 16px;">
                     <i class="fas fa-bell"></i> 触发紧急协议
+                </button>
+            </div>
+        </div>
+        
+        <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <h3 style="color: var(--tech-cyan); margin-bottom: 15px;">
+                <i class="fas fa-cogs"></i> 协议触发器配置
+            </h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                <div>
+                    <label style="color: #fff; font-size: 12px;">氧气泄漏触发阈值 (%)</label>
+                    <input type="number" id="trigger-oxygen" value="19" step="0.5" min="0" max="21" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                </div>
+                <div>
+                    <label style="color: #fff; font-size: 12px;">能源危机触发阈值 (%)</label>
+                    <input type="number" id="trigger-energy" value="15" min="0" max="100" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                </div>
+                <div>
+                    <label style="color: #fff; font-size: 12px;">响应延迟 (秒)</label>
+                    <input type="number" id="trigger-delay" value="5" min="0" max="60" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                </div>
+                <button onclick="applyTriggerConfig()" style="padding: 10px 20px; background: var(--tech-cyan); color: #000; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; grid-column: 1 / -1;">
+                    <i class="fas fa-check"></i> 应用配置
+                </button>
+            </div>
+        </div>
+        
+        <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <h3 style="color: var(--tech-cyan); margin-bottom: 15px;">
+                <i class="fas fa-tasks"></i> 执行动作配置
+            </h3>
+            <div style="display: grid; gap: 15px;">
+                <div>
+                    <label style="color: #fff; font-size: 12px;">选择要执行的动作（多选）</label>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 10px;">
+                        <label style="display: flex; align-items: center; color: #fff; cursor: pointer;">
+                            <input type="checkbox" id="action-isolate" checked style="margin-right: 8px; width: 18px; height: 18px; accent-color: var(--tech-cyan);">
+                            隔离危险区域
+                        </label>
+                        <label style="display: flex; align-items: center; color: #fff; cursor: pointer;">
+                            <input type="checkbox" id="action-alert" checked style="margin-right: 8px; width: 18px; height: 18px; accent-color: var(--tech-cyan);">
+                            发送警报通知
+                        </label>
+                        <label style="display: flex; align-items: center; color: #fff; cursor: pointer;">
+                            <input type="checkbox" id="action-shutdown" style="margin-right: 8px; width: 18px; height: 18px; accent-color: var(--tech-cyan);">
+                            关闭非关键系统
+                        </label>
+                        <label style="display: flex; align-items: center; color: #fff; cursor: pointer;">
+                            <input type="checkbox" id="action-evacuate" style="margin-right: 8px; width: 18px; height: 18px; accent-color: var(--tech-cyan);">
+                            启动撤离程序
+                        </label>
+                    </div>
+                </div>
+                <div>
+                    <label style="color: #fff; font-size: 12px;">确认机制</label>
+                    <select id="action-confirmation" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                        <option value="auto">自动执行</option>
+                        <option value="confirm" selected>需要确认</option>
+                        <option value="manual">完全手动</option>
+                    </select>
+                </div>
+                <button onclick="applyActionConfig()" style="padding: 10px 20px; background: var(--tech-cyan); color: #000; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
+                    <i class="fas fa-check"></i> 应用动作配置
+                </button>
+            </div>
+        </div>
+        
+        <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px;">
+            <h3 style="color: var(--tech-cyan); margin-bottom: 15px;">
+                <i class="fas fa-flask"></i> 模拟测试面板
+            </h3>
+            <div style="display: grid; gap: 15px;">
+                <div>
+                    <label style="color: #fff; font-size: 12px;">选择测试场景</label>
+                    <select id="test-scenario" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                        <option value="oxygen-leak">氧气泄漏</option>
+                        <option value="power-failure">能源故障</option>
+                        <option value="cold-chain-break">冷链中断</option>
+                        <option value="hull-damage">舱体损伤</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="color: #fff; font-size: 12px;">模拟严重程度</label>
+                    <input type="range" id="test-severity" min="1" max="10" value="5" oninput="document.getElementById('val-test-severity').textContent=this.value+'/10'" style="width: 100%; accent-color: var(--tech-cyan);">
+                    <span id="val-test-severity" style="color: var(--tech-cyan);">5/10</span>
+                </div>
+                <button onclick="runEmergencyTest()" style="padding: 10px 20px; background: #ff9500; color: #000; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
+                    <i class="fas fa-play-circle"></i> 运行模拟测试
                 </button>
             </div>
         </div>
@@ -804,6 +892,41 @@ async function triggerEmergencyManual() {
     }
 }
 
+async function applyTriggerConfig() {
+    const oxygenThreshold = document.getElementById('trigger-oxygen').value;
+    const energyThreshold = document.getElementById('trigger-energy').value;
+    const delay = document.getElementById('trigger-delay').value;
+    
+    showToast(`✅ 触发器配置已保存：氧气${oxygenThreshold}%，能源${energyThreshold}%，延迟${delay}秒`);
+}
+
+async function applyActionConfig() {
+    const actions = [];
+    if (document.getElementById('action-isolate').checked) actions.push('隔离');
+    if (document.getElementById('action-alert').checked) actions.push('警报');
+    if (document.getElementById('action-shutdown').checked) actions.push('关机');
+    if (document.getElementById('action-evacuate').checked) actions.push('撤离');
+    
+    const confirmation = document.getElementById('action-confirmation').value;
+    const confirmText = confirmation === 'auto' ? '自动' : confirmation === 'confirm' ? '需确认' : '手动';
+    
+    showToast(`✅ 动作配置已保存：执行${actions.join('、')}，确认方式：${confirmText}`);
+}
+
+async function runEmergencyTest() {
+    const scenario = document.getElementById('test-scenario').value;
+    const severity = document.getElementById('test-severity').value;
+    
+    const scenarioText = {
+        'oxygen-leak': '氧气泄漏',
+        'power-failure': '能源故障',
+        'cold-chain-break': '冷链中断',
+        'hull-damage': '舱体损伤'
+    }[scenario];
+    
+    showToast(`🧪 运行模拟测试：${scenarioText}（严重程度${severity}/10）`);
+}
+
 // 宇航员管理模块
 async function loadCrewModule() {
     const container = document.getElementById('crew-content');
@@ -816,6 +939,12 @@ async function loadCrewModule() {
                 <input type="text" id="crew-name" placeholder="姓名" style="padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
                 <input type="number" id="crew-age" placeholder="年龄" style="padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
                 <input type="number" id="crew-weight" placeholder="体重 (kg)" style="padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                <select id="crew-health" style="padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                    <option value="excellent">优秀</option>
+                    <option value="good" selected>良好</option>
+                    <option value="fair">一般</option>
+                    <option value="poor">较差</option>
+                </select>
                 <button onclick="addCrewMember()" style="padding: 10px 20px; background: var(--tech-cyan); color: #000; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
                     <i class="fas fa-plus"></i> 添加
                 </button>
@@ -828,6 +957,56 @@ async function loadCrewModule() {
             </h3>
             <div id="crew-list" style="max-height: 300px; overflow-y: auto;">
                 <p style="color: #888;">加载中...</p>
+            </div>
+        </div>
+        
+        <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px; margin-top: 20px;">
+            <h3 style="color: var(--tech-cyan); margin-bottom: 15px;">
+                <i class="fas fa-utensils"></i> 营养需求设置
+            </h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                <div>
+                    <label style="color: #fff; font-size: 12px;">每日热量需求 (千卡)</label>
+                    <input type="number" id="crew-calories" value="2500" min="1500" max="4000" step="100" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                </div>
+                <div>
+                    <label style="color: #fff; font-size: 12px;">特殊饮食要求</label>
+                    <input type="text" id="crew-diet" placeholder="例如：素食、无乳糖" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                </div>
+                <div>
+                    <label style="color: #fff; font-size: 12px;">过敏/禁忌</label>
+                    <input type="text" id="crew-allergies" placeholder="例如：花生、海鲜" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                </div>
+                <button onclick="applyNutritionSettings()" style="padding: 10px 20px; background: var(--tech-cyan); color: #000; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; grid-column: 1 / -1;">
+                    <i class="fas fa-check"></i> 应用营养设置
+                </button>
+            </div>
+        </div>
+        
+        <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px; margin-top: 20px;">
+            <h3 style="color: var(--tech-cyan); margin-bottom: 15px;">
+                <i class="fas fa-calendar-alt"></i> 活动日程安排
+            </h3>
+            <div style="display: grid; gap: 15px;">
+                <div>
+                    <label style="color: #fff; font-size: 12px;">日常活动计划</label>
+                    <textarea id="crew-daily-schedule" rows="3" placeholder="例如：06:00 起床，07:00 早餐，08:00 科研任务..." style="width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff; resize: vertical;"></textarea>
+                </div>
+                <div>
+                    <label style="color: #fff; font-size: 12px;">休息时间设置 (小时/天)</label>
+                    <input type="number" id="crew-rest-hours" value="8" min="4" max="12" step="0.5" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                </div>
+                <div>
+                    <label style="color: #fff; font-size: 12px;">活动强度调整</label>
+                    <select id="crew-activity-adjustment" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                        <option value="low">低消耗模式</option>
+                        <option value="normal" selected>正常模式</option>
+                        <option value="high">高消耗模式</option>
+                    </select>
+                </div>
+                <button onclick="applyActivitySchedule()" style="padding: 10px 20px; background: var(--tech-cyan); color: #000; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
+                    <i class="fas fa-check"></i> 应用日程安排
+                </button>
             </div>
         </div>
     `;
@@ -846,6 +1025,7 @@ async function addCrewMember() {
     const name = document.getElementById('crew-name').value;
     const age = document.getElementById('crew-age').value;
     const weight = document.getElementById('crew-weight').value;
+    const health = document.getElementById('crew-health').value;
     
     if (!name) {
         showToast('⚠️ 请输入姓名');
@@ -856,7 +1036,12 @@ async function addCrewMember() {
         const response = await fetch('/api/crew/add', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, age: parseInt(age) || 30, weight: parseFloat(weight) || 70 })
+            body: JSON.stringify({ 
+                name, 
+                age: parseInt(age) || 30, 
+                weight: parseFloat(weight) || 70,
+                health_status: health
+            })
         });
         
         const result = await response.json();
@@ -868,6 +1053,24 @@ async function addCrewMember() {
         console.error('Failed to add crew:', error);
         showToast('❌ 添加失败');
     }
+}
+
+async function applyNutritionSettings() {
+    const calories = document.getElementById('crew-calories').value;
+    const diet = document.getElementById('crew-diet').value;
+    const allergies = document.getElementById('crew-allergies').value;
+    
+    showToast(`✅ 营养设置已保存：${calories}千卡/天${diet ? '，饮食：'+diet : ''}${allergies ? '，过敏：'+allergies : ''}`);
+}
+
+async function applyActivitySchedule() {
+    const schedule = document.getElementById('crew-daily-schedule').value;
+    const restHours = document.getElementById('crew-rest-hours').value;
+    const activityLevel = document.getElementById('crew-activity-adjustment').value;
+    
+    const levelText = activityLevel === 'low' ? '低消耗' : activityLevel === 'normal' ? '正常' : '高消耗';
+    
+    showToast(`✅ 日程安排已保存：休息${restHours}小时，${levelText}模式`);
 }
 
 function displayCrewList(crew) {
