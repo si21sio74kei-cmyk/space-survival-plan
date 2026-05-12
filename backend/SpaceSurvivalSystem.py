@@ -49,3 +49,8 @@ async def auto_simulate(request: Request, call_next):
     
     response = await call_next(request)
     return response
+
+# 本地开发启动（Vercel环境下不会执行）
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8001)
