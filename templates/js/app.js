@@ -132,6 +132,7 @@ async function loadFoodModule() {
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
                 <input type="text" id="food-name" placeholder="食物名称" style="padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
                 <input type="number" id="food-quantity" placeholder="数量" style="padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                <input type="date" id="food-expiry" placeholder="保质期" style="padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
                 <select id="food-nutrition" style="padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
                     <option value="protein">蛋白质</option>
                     <option value="carb">碳水化合物</option>
@@ -140,6 +141,27 @@ async function loadFoodModule() {
                 </select>
                 <button onclick="addFoodItem()" style="padding: 10px 20px; background: var(--tech-cyan); color: #000; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
                     <i class="fas fa-plus"></i> 添加
+                </button>
+            </div>
+        </div>
+        
+        <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <h3 style="color: var(--tech-cyan); margin-bottom: 15px;">
+                <i class="fas fa-sliders-h"></i> 消耗控制
+            </h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                <div>
+                    <label style="color: #fff; font-size: 12px;">每日消耗速率</label>
+                    <input type="range" id="food-consumption-rate" min="0.1" max="5" step="0.1" value="1" oninput="document.getElementById('val-consumption').textContent=this.value" style="width: 100%; accent-color: var(--tech-cyan);">
+                    <span id="val-consumption" style="color: var(--tech-cyan);">1</span>
+                </div>
+                <select id="food-activity-level" style="padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                    <option value="low">低活动量</option>
+                    <option value="normal" selected>正常活动</option>
+                    <option value="high">高活动量</option>
+                </select>
+                <button onclick="updateConsumptionRate()" style="padding: 10px 20px; background: var(--tech-cyan); color: #000; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
+                    <i class="fas fa-check"></i> 应用
                 </button>
             </div>
         </div>
@@ -168,6 +190,7 @@ async function addFoodItem() {
     const name = document.getElementById('food-name').value;
     const quantity = document.getElementById('food-quantity').value;
     const nutrition = document.getElementById('food-nutrition').value;
+    const expiry = document.getElementById('food-expiry').value;
     
     if (!name || !quantity) {
         showToast('⚠️ 请填写完整信息');
@@ -178,7 +201,7 @@ async function addFoodItem() {
         const response = await fetch('/api/food/add', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, quantity, nutrition_type: nutrition })
+            body: JSON.stringify({ name, quantity, nutrition_type: nutrition, expiry_date: expiry })
         });
         
         const result = await response.json();
@@ -189,6 +212,27 @@ async function addFoodItem() {
     } catch (error) {
         console.error('Failed to add food:', error);
         showToast('❌ 添加失败');
+    }
+}
+
+async function updateConsumptionRate() {
+    const rate = document.getElementById('food-consumption-rate').value;
+    const activity_level = document.getElementById('food-activity-level').value;
+    
+    try {
+        const response = await fetch('/api/food/consumption', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rate: parseFloat(rate), activity_level })
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            showToast('✅ 消耗速率已更新！');
+        }
+    } catch (error) {
+        console.error('Failed to update consumption:', error);
+        showToast('❌ 更新失败');
     }
 }
 
@@ -213,7 +257,7 @@ function displayFoodInventory(data) {
 async function loadMedicalModule() {
     const container = document.getElementById('medical-content');
     container.innerHTML = `
-        <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px;">
+        <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px; margin-bottom: 20px;">
             <h3 style="color: var(--tech-cyan); margin-bottom: 15px;">
                 <i class="fas fa-syringe"></i> 添加医疗物品
             </h3>
@@ -224,9 +268,35 @@ async function loadMedicalModule() {
                     <option value="medicine">药品</option>
                     <option value="sample">生物样本</option>
                 </select>
+                <input type="number" id="medical-quantity" placeholder="数量" style="padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
                 <input type="number" id="medical-temp" placeholder="存储温度 (°C)" style="padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                <select id="medical-urgency" style="padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                    <option value="low">低优先级</option>
+                    <option value="normal" selected>正常</option>
+                    <option value="high">高优先级</option>
+                    <option value="critical">紧急</option>
+                </select>
                 <button onclick="addMedicalItem()" style="padding: 10px 20px; background: var(--tech-cyan); color: #000; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
                     <i class="fas fa-plus"></i> 添加
+                </button>
+            </div>
+        </div>
+        
+        <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px;">
+            <h3 style="color: var(--tech-cyan); margin-bottom: 15px;">
+                <i class="fas fa-thermometer-half"></i> 温度控制
+            </h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                <div>
+                    <label style="color: #fff; font-size: 12px;">最低温度 (°C)</label>
+                    <input type="number" id="medical-temp-min" value="-80" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                </div>
+                <div>
+                    <label style="color: #fff; font-size: 12px;">最高温度 (°C)</label>
+                    <input type="number" id="medical-temp-max" value="-60" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                </div>
+                <button onclick="updateMedicalTempRange()" style="padding: 10px 20px; background: var(--tech-cyan); color: #000; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; grid-column: 1 / -1;">
+                    <i class="fas fa-check"></i> 应用温度范围
                 </button>
             </div>
         </div>
@@ -236,7 +306,9 @@ async function loadMedicalModule() {
 async function addMedicalItem() {
     const name = document.getElementById('medical-name').value;
     const type = document.getElementById('medical-type').value;
+    const quantity = document.getElementById('medical-quantity').value;
     const storage_temp = document.getElementById('medical-temp').value;
+    const urgency = document.getElementById('medical-urgency').value;
     
     if (!name) {
         showToast('⚠️ 请输入物品名称');
@@ -247,7 +319,13 @@ async function addMedicalItem() {
         const response = await fetch('/api/medical/add', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, type, storage_temp: parseFloat(storage_temp) || -70 })
+            body: JSON.stringify({ 
+                name, 
+                type, 
+                quantity: parseFloat(quantity) || 1,
+                storage_temp: parseFloat(storage_temp) || -70,
+                urgency
+            })
         });
         
         const result = await response.json();
@@ -257,6 +335,27 @@ async function addMedicalItem() {
     } catch (error) {
         console.error('Failed to add medical item:', error);
         showToast('❌ 添加失败');
+    }
+}
+
+async function updateMedicalTempRange() {
+    const min = document.getElementById('medical-temp-min').value;
+    const max = document.getElementById('medical-temp-max').value;
+    
+    try {
+        const response = await fetch('/api/medical/temp-range', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ min: parseFloat(min), max: parseFloat(max) })
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            showToast('✅ 温度范围已更新！');
+        }
+    } catch (error) {
+        console.error('Failed to update temp range:', error);
+        showToast('❌ 更新失败');
     }
 }
 
