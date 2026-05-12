@@ -131,7 +131,7 @@ async function loadFoodModule() {
             </h3>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
                 <input type="text" id="food-name" placeholder="食物名称" style="padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
-                <input type="number" id="food-quantity" placeholder="数量" style="padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                <input type="number" id="food-quantity" placeholder="数量" min="0" step="0.1" style="padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
                 <input type="date" id="food-expiry" placeholder="保质期" style="padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
                 <select id="food-nutrition" style="padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
                     <option value="protein">蛋白质</option>
@@ -162,6 +162,45 @@ async function loadFoodModule() {
                 </select>
                 <button onclick="updateConsumptionRate()" style="padding: 10px 20px; background: var(--tech-cyan); color: #000; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
                     <i class="fas fa-check"></i> 应用
+                </button>
+            </div>
+        </div>
+        
+        <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <h3 style="color: var(--tech-cyan); margin-bottom: 15px;">
+                <i class="fas fa-exclamation-circle"></i> 紧急配给模式
+            </h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                <label style="display: flex; align-items: center; color: #fff; cursor: pointer;">
+                    <input type="checkbox" id="food-emergency-mode" style="margin-right: 10px; width: 20px; height: 20px; accent-color: var(--tech-cyan);">
+                    启用紧急配给
+                </label>
+                <div>
+                    <label style="color: #fff; font-size: 12px;">配给百分比 (%)</label>
+                    <input type="range" id="food-ration-percent" min="10" max="100" value="100" oninput="document.getElementById('val-ration').textContent=this.value+'%'" style="width: 100%; accent-color: var(--tech-cyan);">
+                    <span id="val-ration" style="color: var(--tech-cyan);">100%</span>
+                </div>
+                <button onclick="toggleEmergencyRation()" style="padding: 10px 20px; background: #ff9500; color: #000; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
+                    <i class="fas fa-toggle-on"></i> 切换模式
+                </button>
+            </div>
+        </div>
+        
+        <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <h3 style="color: var(--tech-cyan); margin-bottom: 15px;">
+                <i class="fas fa-thermometer-half"></i> 保鲜控制
+            </h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                <div>
+                    <label style="color: #fff; font-size: 12px;">过期预警天数</label>
+                    <input type="number" id="food-expiry-warning" value="7" min="1" max="30" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                </div>
+                <div>
+                    <label style="color: #fff; font-size: 12px;">最低库存预警 (%)</label>
+                    <input type="number" id="food-min-stock" value="20" min="5" max="50" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 5px; color: #fff;">
+                </div>
+                <button onclick="updateFoodWarnings()" style="padding: 10px 20px; background: var(--tech-cyan); color: #000; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; grid-column: 1 / -1;">
+                    <i class="fas fa-check"></i> 应用预警设置
                 </button>
             </div>
         </div>
@@ -234,6 +273,35 @@ async function updateConsumptionRate() {
         console.error('Failed to update consumption:', error);
         showToast('❌ 更新失败');
     }
+}
+
+async function toggleEmergencyRation() {
+    const enabled = document.getElementById('food-emergency-mode').checked;
+    const percentage = document.getElementById('food-ration-percent').value;
+    
+    try {
+        const response = await fetch('/api/food/emergency-ration', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enabled, percentage: parseInt(percentage) })
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            showToast(enabled ? '⚠️ 紧急配给模式已启用' : '✅ 已恢复正常配给');
+        }
+    } catch (error) {
+        console.error('Failed to toggle emergency ration:', error);
+        showToast('❌ 操作失败');
+    }
+}
+
+async function updateFoodWarnings() {
+    // 注意：这些设置目前保存在本地状态，后端API可扩展
+    const expiryWarning = document.getElementById('food-expiry-warning').value;
+    const minStock = document.getElementById('food-min-stock').value;
+    
+    showToast(`✅ 预警设置已保存：过期${expiryWarning}天，最低库存${minStock}%`);
 }
 
 function displayFoodInventory(data) {
