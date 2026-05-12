@@ -17,8 +17,7 @@ from services.ai_engine import engine as ai_engine
 
 app = Flask(__name__, 
             template_folder='frontend',
-            static_folder='frontend',
-            static_url_path='')
+            static_folder='frontend')
 
 # Vercel Serverless架构：每次请求时自动执行模拟
 @app.before_request
