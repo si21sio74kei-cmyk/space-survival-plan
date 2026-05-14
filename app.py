@@ -338,6 +338,25 @@ def trigger_emergency_manual():
     result = ai_engine.trigger_emergency_manual(level)
     return jsonify(result)
 
+@app.route('/api/emergency/simulate', methods=['POST'])
+def simulate_emergency_scenario():
+    """模拟灾难场景"""
+    data = request.get_json() or {}
+    scenario = data.get('scenario', 'oxygen-leak')
+    severity = data.get('severity', 5)
+    strategy = data.get('strategy', 'survival-first')
+    result = ai_engine.run_simulation(scenario, severity, strategy)
+    return jsonify(result)
+
+@app.route('/api/system/settings', methods=['POST'])
+def update_system_settings_api():
+    """更新系统设置"""
+    data = request.get_json() or {}
+    refresh_rate = data.get('refresh_rate', 3)
+    display_mode = data.get('display_mode', 'detailed')
+    result = ai_engine.update_system_settings(refresh_rate, display_mode)
+    return jsonify(result)
+
 # ==================== 宇航员管理 API ====================
 
 @app.route('/api/crew/add', methods=['POST'])

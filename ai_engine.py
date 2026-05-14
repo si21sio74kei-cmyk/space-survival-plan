@@ -981,6 +981,80 @@ class AISurvivalEngine:
                 'ai_decision': 'AI已根据乘员变化重新计算资源消耗预测'
             }
             logs.insert(0, log_entry)
+        
+        status = self.get_current_status()
+        log_entry = {
+            'timestamp': datetime.datetime.utcnow().isoformat(),
+            'log_type': 'INFO',
+            'message': f'任务参数已更新 | 环境: 生存指数 {status["survival_index"]:.1f}%',
+            'ai_decision': 'AI已根据新参数重新计算预测'
+        }
+        logs.insert(0, log_entry)
+        return {'success': True}
+    
+    def update_emergency_config(self, triggers, actions, confirmation):
+        """更新紧急协议配置"""
+        state, logs = get_persistent_state()
+        state['emergency_triggers'].update(triggers)
+        state['emergency_actions'] = actions
+        state['emergency_confirmation'] = confirmation
+        
+        status = self.get_current_status()
+        log_entry = {
+            'timestamp': datetime.datetime.utcnow().isoformat(),
+            'log_type': 'INFO',
+            'message': f'紧急协议配置已更新 | 环境: 生存指数 {status["survival_index"]:.1f}%, 能源 {status["energy_level"]:.1f}%',
+            'ai_decision': 'AI已更新紧急协议配置'
+        }
+        logs.insert(0, log_entry)
+        return {'success': True}
+    
+    def run_simulation(self, scenario, severity, strategy):
+        """运行场景模拟"""
+        state, logs = get_persistent_state()
+        
+        scenario_text = {
+            'oxygen-leak': '氧气泄漏',
+            'power-failure': '能源故障',
+            'cold-chain-break': '冷链中断',
+            'hull-damage': '舱体损伤'
+        }.get(scenario, scenario)
+        
+        # 模拟影响
+        if scenario == 'oxygen-leak':
+            state['oxygen_level'] = max(0, state['oxygen_level'] - float(severity) * 2)
+        elif scenario == 'power-failure':
+            state['energy_level'] = max(0, state['energy_level'] - float(severity) * 3)
+        elif scenario == 'cold-chain-break':
+            state['medical_safety'] = max(0, state['medical_safety'] - float(severity) * 2)
+        elif scenario == 'hull-damage':
+            state['pressure'] = max(80, state['pressure'] - float(severity) * 1)
+            state['survival_index'] -= float(severity)
+        
+        status = self.get_current_status()
+        log_entry = {
+            'timestamp': datetime.datetime.utcnow().isoformat(),
+            'log_type': 'WARNING',
+            'message': f'模拟运行: {scenario_text} (严重程度{severity}) | 环境: 生存指数 {status["survival_index"]:.1f}%, 氧气 {status["oxygen_level"]:.1f}%',
+            'ai_decision': f'AI已执行{strategy}策略模拟'
+        }
+        logs.insert(0, log_entry)
+        return {'success': True, 'status': status}
+    
+    def update_system_settings(self, refresh_rate, display_mode):
+        """更新系统设置"""
+        state, logs = get_persistent_state()
+        state['display_settings']['refresh_rate'] = int(refresh_rate)
+        state['display_settings']['chart_options'] = display_mode
+        
+        status = self.get_current_status()
+        log_entry = {
+            'timestamp': datetime.datetime.utcnow().isoformat(),
+            'log_type': 'INFO',
+            'message': f'系统设置已更新 | 环境: 生存指数 {status["survival_index"]:.1f}%',
+            'ai_decision': 'AI已应用新的系统配置'
+        }
+        logs.insert(0, log_entry)
         return {'success': True}
     
     def update_nutrition_settings(self, calories, diet, allergies):

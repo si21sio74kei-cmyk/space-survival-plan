@@ -1057,24 +1057,65 @@ async function applyTriggerConfig() {
     const energyThreshold = document.getElementById('trigger-energy').value;
     const delay = document.getElementById('trigger-delay').value;
     
-    showToast(`✅ 触发器配置已保存：氧气${oxygenThreshold}%，能源${energyThreshold}%，延迟${delay}秒`);
-    // 刷新数据以显示最新状态
-    await refreshData(window.charts);
+    try {
+        const response = await fetch('/api/emergency/configure', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                triggers: {
+                    survival_index_min: 30,
+                    energy_level_min: parseFloat(energyThreshold),
+                    oxygen_level_min: parseFloat(oxygenThreshold)
+                },
+                actions: ['alert_crew', 'conserve_energy', 'prioritize_life_support'],
+                delay: parseInt(delay)
+            })
+        });
+        const result = await response.json();
+        if (result.success) {
+            showToast(`✅ 触发器配置已保存：氧气${oxygenThreshold}%，能源${energyThreshold}%，延迟${delay}秒`);
+            await refreshData(window.charts);
+        } else {
+            showToast('❌ 保存失败');
+        }
+    } catch (error) {
+        console.error('Failed to update trigger config:', error);
+        showToast('❌ 保存失败');
+    }
 }
 
 async function applyActionConfig() {
     const actions = [];
-    if (document.getElementById('action-isolate').checked) actions.push('隔离');
-    if (document.getElementById('action-alert').checked) actions.push('警报');
-    if (document.getElementById('action-shutdown').checked) actions.push('关机');
-    if (document.getElementById('action-evacuate').checked) actions.push('撤离');
+    if (document.getElementById('action-isolate').checked) actions.push('isolate');
+    if (document.getElementById('action-alert').checked) actions.push('alert_crew');
+    if (document.getElementById('action-shutdown').checked) actions.push('shutdown_non_critical');
+    if (document.getElementById('action-evacuate').checked) actions.push('evacuate');
     
     const confirmation = document.getElementById('action-confirmation').value;
-    const confirmText = confirmation === 'auto' ? '自动' : confirmation === 'confirm' ? '需确认' : '手动';
     
-    showToast(`✅ 动作配置已保存：执行${actions.join('、')}，确认方式：${confirmText}`);
-    // 刷新数据以显示最新状态
-    await refreshData(window.charts);
+    try {
+        const response = await fetch('/api/emergency/configure', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                triggers: {},
+                actions: actions.length > 0 ? actions : ['alert_crew'],
+                delay: 0,
+                confirmation: confirmation
+            })
+        });
+        const result = await response.json();
+        if (result.success) {
+            const confirmText = confirmation === 'auto' ? '自动' : confirmation === 'confirm' ? '需确认' : '手动';
+            showToast(`✅ 动作配置已保存：执行${actions.length > 0 ? actions.join('、') : '警报'}，确认方式：${confirmText}`);
+            await refreshData(window.charts);
+        } else {
+            showToast('❌ 保存失败');
+        }
+    } catch (error) {
+        console.error('Failed to update action config:', error);
+        showToast(' 保存失败');
+    }
 }
 
 async function runEmergencyTest() {
@@ -1088,9 +1129,23 @@ async function runEmergencyTest() {
         'hull-damage': '舱体损伤'
     }[scenario];
     
-    showToast(`🧪 运行模拟测试：${scenarioText}（严重程度${severity}/10）`);
-    // 刷新数据以显示最新状态
-    await refreshData(window.charts);
+    try {
+        const response = await fetch('/api/emergency/simulate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ scenario, severity: parseFloat(severity), strategy: 'survival-first' })
+        });
+        const result = await response.json();
+        if (result.success) {
+            showToast(` 运行模拟测试：${scenarioText}（严重程度${severity}/10）`);
+            await refreshData(window.charts);
+        } else {
+            showToast('❌ 模拟失败');
+        }
+    } catch (error) {
+        console.error('Failed to run simulation:', error);
+        showToast('❌ 模拟失败');
+    }
 }
 
 // 宇航员管理模块
@@ -1478,9 +1533,23 @@ async function runScenarioSimulation() {
         'mission-continue': '任务继续'
     }[strategy];
     
-    showToast(`🧪 运行模拟：${scenarioText}（风险${risk}%），策略：${strategyText}`);
-    // 刷新数据以显示最新状态
-    await refreshData(window.charts);
+    try {
+        const response = await fetch('/api/emergency/simulate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ scenario, severity: parseFloat(risk) / 10, strategy })
+        });
+        const result = await response.json();
+        if (result.success) {
+            showToast(`🧪 模拟运行完成：${scenarioText} | 策略：${strategyText}`);
+            await refreshData(window.charts);
+        } else {
+            showToast('❌ 模拟失败');
+        }
+    } catch (error) {
+        console.error('Failed to run simulation:', error);
+        showToast('❌ 模拟失败');
+    }
 }
 
 async function applyAIPreferences() {
@@ -1575,9 +1644,25 @@ async function loadSettingsModule() {
 }
 
 async function applySettings() {
-    showToast('✅ 设置已保存（演示功能）');
-    // 刷新数据以显示最新状态
-    await refreshData(window.charts);
+    const refreshRate = document.getElementById('setting-refresh').value;
+    
+    try {
+        const response = await fetch('/api/system/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refresh_rate: parseInt(refreshRate), display_mode: 'detailed' })
+        });
+        const result = await response.json();
+        if (result.success) {
+            showToast(`✅ 系统设置已保存：刷新频率${refreshRate}秒`);
+            await refreshData(window.charts);
+        } else {
+            showToast('❌ 保存失败');
+        }
+    } catch (error) {
+        console.error('Failed to update settings:', error);
+        showToast('❌ 保存失败');
+    }
 }
 
 // 设置滑块输入监听
