@@ -6,6 +6,86 @@ const initCharts = () => {
     gaugeChart = echarts.init(document.getElementById('gauge-chart'));
     predictionChart = echarts.init(document.getElementById('prediction-chart'));
     
+    // 初始化仪表盘配置
+    const gaugeOption = {
+        series: [{
+            type: 'gauge',
+            startAngle: 180,
+            endAngle: 0,
+            min: 0,
+            max: 100,
+            splitNumber: 5,
+            itemStyle: { color: '#00f3ff' },
+            progress: {
+                show: true,
+                width: 18
+            },
+            pointer: {
+                icon: 'path://M12.8,0.7l12,40.1H0.7L12.8,0.7z',
+                length: '12%',
+                width: 20,
+                offsetCenter: [0, '-60%'],
+                itemStyle: { color: 'auto' }
+            },
+            axisLine: {
+                lineStyle: {
+                    width: 18,
+                    color: [[1, 'rgba(0,243,255,0.3)']]
+                }
+            },
+            axisTick: { show: false },
+            splitLine: { show: false },
+            axisLabel: { show: false },
+            title: { show: false },
+            detail: {
+                valueAnimation: true,
+                fontSize: 40,
+                offsetCenter: [0, '0%'],
+                color: '#00f3ff',
+                formatter: '{value}%'
+            },
+            data: [{ value: 85 }]
+        }]
+    };
+    gaugeChart.setOption(gaugeOption);
+    
+    // 初始化预测时间线配置
+    const predictionOption = {
+        title: { text: '生存指数预测', textStyle: { color: '#fff', fontSize: 14 } },
+        tooltip: { trigger: 'axis' },
+        xAxis: {
+            type: 'category',
+            data: ['D+30', 'D+60', 'D+90', 'D+120'],
+            axisLabel: { color: '#fff' }
+        },
+        yAxis: {
+            type: 'value',
+            min: 0,
+            max: 100,
+            axisLabel: { color: '#fff' },
+            splitLine: { lineStyle: { color: '#333' } }
+        },
+        series: [{
+            type: 'line',
+            smooth: true,
+            data: [70, 60, 50, 40],
+            itemStyle: { color: '#00f3ff' },
+            areaStyle: {
+                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                    { offset: 0, color: 'rgba(0, 243, 255, 0.5)' },
+                    { offset: 1, color: 'rgba(0, 243, 255, 0.1)' }
+                ])
+            },
+            markLine: {
+                symbol: ['none', 'none'],
+                label: { formatter: '生存警戒线 (30%)', position: 'insideEndTop', color: '#ff4d4d', fontSize: 10 },
+                lineStyle: { color: '#ff4d4d', type: 'dashed', width: 2 },
+                data: [{ yAxis: 30 }]
+            }
+        }]
+    };
+    predictionChart.setOption(predictionOption);
+    
     updateDashboardView();
     return { mainChart, gaugeChart, predictionChart };
 };
@@ -142,16 +222,46 @@ const updateAllCharts = (data) => {
     };
     mainChart.setOption(radarOption);
     
-    // 更新仪表盘
+    // 更新仪表盘 - 使用完整配置
     gaugeChart.setOption({
         series: [{
+            type: 'gauge',
+            detail: {
+                valueAnimation: true,
+                fontSize: 40,
+                offsetCenter: [0, '0%'],
+                color: '#00f3ff',
+                formatter: '{value}%'
+            },
             data: [{ value: Math.round(data.survival_index || 85) }]
         }]
     });
     
-    // 更新预测时间线
+    // 更新预测时间线 - 使用完整配置
     predictionChart.setOption({
-        xAxis: { data: ['D+30', 'D+60', 'D+90', 'D+120'] },
-        series: [{ data: data.predictions || [70, 60, 50, 40] }]
+        xAxis: { 
+            type: 'category',
+            data: ['D+30', 'D+60', 'D+90', 'D+120'],
+            axisLabel: { color: '#fff' }
+        },
+        yAxis: {
+            type: 'value',
+            min: 0,
+            max: 100,
+            axisLabel: { color: '#fff' },
+            splitLine: { lineStyle: { color: '#333' } }
+        },
+        series: [{
+            type: 'line',
+            smooth: true,
+            data: data.predictions || [70, 60, 50, 40],
+            itemStyle: { color: '#00f3ff' },
+            areaStyle: {
+                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                    { offset: 0, color: 'rgba(0, 243, 255, 0.5)' },
+                    { offset: 1, color: 'rgba(0, 243, 255, 0.1)' }
+                ])
+            }
+        }]
     });
 };

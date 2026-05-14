@@ -173,15 +173,42 @@ class AISurvivalEngine:
         status = state.copy()
         status['base_stability'] = (status['energy_level'] + status['food_stability'] + status['medical_safety']) / 3
         status['environment_score'] = (status['oxygen_level'] + status['humidity'] * 2 + status['pressure']) / 3
-        status['estimated_survival_days'] = int(status['survival_index'] * 1.5)
         
-        # 生成预测时间线（基于当前状态推演）
-        status['predictions'] = [
-            max(0, int(status['survival_index'] * 0.9)),
-            max(0, int(status['survival_index'] * 0.75)),
-            max(0, int(status['survival_index'] * 0.6)),
-            max(0, int(status['survival_index'] * 0.45))
-        ]
+        # 智能计算预计生存天数（基于资源衰减率）
+        crew_count = max(1, status['crew_count'])
+        food_days = status['food_stability'] / (2.0 * crew_count / 4.0)
+        energy_days = status['energy_level'] / 1.0
+        oxygen_days = status['oxygen_level'] / 0.5
+        water_days = status['water_reserve'] / (1.5 * crew_count / 4.0)
+        status['estimated_survival_days'] = max(0, round(min(food_days, energy_days, oxygen_days, water_days), 1))
+        
+        # 智能生成预测时间线（基于真实衰减率推演）
+        daily_decay = {
+            'food': 2.0 * crew_count / 4.0,
+            'energy': 1.0,
+            'oxygen': 0.5,
+            'water': 1.5 * crew_count / 4.0,
+            'medical': 0.3
+        }
+        
+        predictions = []
+        for day in [30, 60, 90, 120]:
+            food_future = max(0, status['food_stability'] - daily_decay['food'] * day)
+            energy_future = max(0, status['energy_level'] - daily_decay['energy'] * day)
+            oxygen_future = max(0, status['oxygen_level'] - daily_decay['oxygen'] * day)
+            water_future = max(0, status['water_reserve'] - daily_decay['water'] * day)
+            medical_future = max(0, status['medical_safety'] - daily_decay['medical'] * day)
+            
+            predicted_index = (
+                food_future * 0.2 +
+                medical_future * 0.3 +
+                energy_future * 0.2 +
+                oxygen_future * 0.2 +
+                water_future * 0.1
+            )
+            predictions.append(round(max(0, predicted_index), 1))
+        
+        status['predictions'] = predictions
         
         # emergency_mode默认为False（只在simulate_step中可能为True）
         status['emergency_mode'] = False
@@ -192,9 +219,10 @@ class AISurvivalEngine:
         """获取食物库存"""
         state, _ = get_persistent_state()
         return {
-            'total_stability': round(state['food_stability'], 1),
+            'food_stability': round(state['food_stability'], 1),  # 前端图表所需字段
             'protein_level': round(state['protein_level'], 1),
             'water_reserve': round(state['water_reserve'], 1),
+            'total_stability': round(state['food_stability'], 1),
             'categories': [
                 {'name': '蛋白质储备', 'value': round(state['protein_level'], 1), 'unit': '%'},
                 {'name': '水资源', 'value': round(state['water_reserve'], 1), 'unit': '%'},
@@ -207,6 +235,7 @@ class AISurvivalEngine:
         """获取医疗状态"""
         state, _ = get_persistent_state()
         return {
+            'medical_safety': round(state['medical_safety'], 1),  # 前端所需字段
             'safety_level': round(state['medical_safety'], 1),
             'temperature': state['medical_temp'],
             'supplies': round(state['medical_safety'], 1),
@@ -221,8 +250,10 @@ class AISurvivalEngine:
         """获取能源状态"""
         state, _ = get_persistent_state()
         return {
+            'energy_level': round(state['energy_level'], 1),  # 前端所需字段
             'level': round(state['energy_level'], 1),
             'backup_hours': round(state['backup_power_hours'], 1),
+            'backup_power_hours': round(state['backup_power_hours'], 1),  # 前端所需字段
             'consumption_rate': 0.5,
             'sources': [
                 {'name': '主反应堆', 'value': round(state['energy_level'] * 0.7, 1)},
@@ -235,6 +266,10 @@ class AISurvivalEngine:
         """获取环境状态"""
         state, _ = get_persistent_state()
         return {
+            'oxygen_level': round(state['oxygen_level'], 1),  # 前端所需字段
+            'humidity': round(state['humidity'], 1),  # 前端所需字段
+            'pressure': round(state['pressure'], 1),  # 前端所需字段
+            'radiation_level': round(state['radiation_level'], 1),  # 前端所需字段
             'oxygen': round(state['oxygen_level'], 1),
             'co2': state['co2_level'],
             'radiation': round(state['radiation_level'], 1),
@@ -248,20 +283,77 @@ class AISurvivalEngine:
         _, logs = get_persistent_state()
         return logs[-limit:]
 
-    def generate_report(self, report_type='daily'):
-        """生成AI报告"""
+    def generate_report(self, report_type='daily', query=None):
+        """生成AI报告或回答用户提问（使用智谱API）"""
         state, logs = get_persistent_state()
-        return {
-            'type': report_type,
-            'mission_day': state['mission_day'],
-            'summary': f'任务第{state["mission_day"]}天，系统运行基本稳定',
-            'recommendations': [
-                '继续监控能源消耗',
-                '保持医疗冷链温度',
-                '优化营养配给方案'
-            ],
-            'timestamp': datetime.datetime.utcnow().isoformat()
-        }
+        status = self.get_current_status()
+        
+        # 如果没有AI客户端，返回基础报告
+        if client is None:
+            return {
+                'type': report_type,
+                'mission_day': state['mission_day'],
+                'summary': f'任务第{state["mission_day"]}天，系统运行基本稳定',
+                'recommendations': ['继续监控能源消耗', '保持医疗冷链温度', '优化营养配给方案'],
+                'timestamp': datetime.datetime.utcnow().isoformat()
+            }
+        
+        try:
+            if query:
+                # 处理用户自由问答
+                prompt = f"""
+你是一个深空基地的 AI 生存控制核心。当前状态如下：
+- 任务天数: {status['mission_day']}
+- 生存指数: {status['survival_index']:.1f}%
+- 能源水平: {status['energy_level']:.1f}%
+- 食物稳定性: {status['food_stability']:.1f}%
+- 医疗安全: {status['medical_safety']:.1f}%
+- 氧气浓度: {status['oxygen_level']:.1f}%
+- 水资源: {status['water_reserve']:.1f}%
+
+宇航员询问: "{query}"
+请结合当前系统状态，给出专业、简洁且符合深空生存背景的回答。
+控制在100字以内。
+"""
+            else:
+                # 处理固定报告
+                prompt = f"""
+你是一个深空基地的 AI 生存控制核心。当前状态如下：
+- 任务天数: {status['mission_day']}
+- 生存指数: {status['survival_index']:.1f}%
+- 能源水平: {status['energy_level']:.1f}%
+- 食物稳定性: {status['food_stability']:.1f}%
+- 医疗安全: {status['medical_safety']:.1f}%
+- 氧气浓度: {status['oxygen_level']:.1f}%
+- 水资源: {status['water_reserve']:.1f}%
+
+请生成一份{report_type}报告，包括：
+1. 当前系统状态总结
+2. 主要风险点
+3. 具体建议措施
+
+控制在150字以内。
+"""
+            response = client.chat.completions.create(
+                model="glm-4-air",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.7
+            )
+            
+            return {
+                'type': report_type,
+                'mission_day': state['mission_day'],
+                'summary': response.choices[0].message.content,
+                'report': response.choices[0].message.content, # 兼容前端字段
+                'timestamp': datetime.datetime.utcnow().isoformat()
+            }
+        except Exception as e:
+            return {
+                'type': report_type,
+                'mission_day': state['mission_day'],
+                'summary': f'AI报告生成失败: {str(e)[:50]}',
+                'timestamp': datetime.datetime.utcnow().isoformat()
+            }
 
     def trigger_emergency(self, level='warning'):
         """触发紧急协议"""
@@ -428,13 +520,39 @@ class AISurvivalEngine:
             status['water_reserve'] * 0.1
         )
         
-        # 生成预测时间线（基于当前状态推演）
-        predictions = [
-            max(0, int(status['survival_index'] * 0.9)),
-            max(0, int(status['survival_index'] * 0.75)),
-            max(0, int(status['survival_index'] * 0.6)),
-            max(0, int(status['survival_index'] * 0.45))
-        ]
+        # 智能计算预计生存天数
+        crew_count = max(1, status['crew_count'])
+        food_days = status['food_stability'] / (2.0 * crew_count / 4.0)
+        energy_days = status['energy_level'] / 1.0
+        oxygen_days = status['oxygen_level'] / 0.5
+        water_days = status['water_reserve'] / (1.5 * crew_count / 4.0)
+        estimated_survival_days = max(0, round(min(food_days, energy_days, oxygen_days, water_days), 1))
+        
+        # 智能生成预测时间线
+        daily_decay = {
+            'food': 2.0 * crew_count / 4.0,
+            'energy': 1.0,
+            'oxygen': 0.5,
+            'water': 1.5 * crew_count / 4.0,
+            'medical': 0.3
+        }
+        
+        predictions = []
+        for day in [30, 60, 90, 120]:
+            food_future = max(0, status['food_stability'] - daily_decay['food'] * day)
+            energy_future = max(0, status['energy_level'] - daily_decay['energy'] * day)
+            oxygen_future = max(0, status['oxygen_level'] - daily_decay['oxygen'] * day)
+            water_future = max(0, status['water_reserve'] - daily_decay['water'] * day)
+            medical_future = max(0, status['medical_safety'] - daily_decay['medical'] * day)
+            
+            predicted_index = (
+                food_future * 0.2 +
+                medical_future * 0.3 +
+                energy_future * 0.2 +
+                oxygen_future * 0.2 +
+                water_future * 0.1
+            )
+            predictions.append(round(max(0, predicted_index), 1))
         
         # 5. 调用 GLM-4-AIR 进行真实 AI 决策
         ai_advice, ai_action_taken = self.analyze_with_ai(status)
@@ -474,7 +592,7 @@ class AISurvivalEngine:
             "diet_advice": diet_advice,
             "emergency_mode": emergency_mode,
             "predictions": predictions,
-            "estimated_survival_days": int(status['survival_index'] * 1.5),
+            "estimated_survival_days": estimated_survival_days,
             "logs": event_log
         }
     
@@ -513,10 +631,11 @@ class AISurvivalEngine:
             state['base_stability'] = (state['energy_level'] + state['food_stability'] + state['medical_safety']) / 3
             state['environment_score'] = (state['oxygen_level'] + state['humidity'] * 2 + state['pressure']) / 3
             state['survival_index'] = (
-                state['food_stability'] * 0.25 +
-                state['energy_level'] * 0.25 +
-                state['medical_safety'] * 0.25 +
-                state['oxygen_level'] * 0.25
+                state['food_stability'] * 0.2 +
+                state['medical_safety'] * 0.3 +
+                state['energy_level'] * 0.2 +
+                state['oxygen_level'] * 0.2 +
+                state['water_reserve'] * 0.1
             )
         
         return {
@@ -543,15 +662,19 @@ class AISurvivalEngine:
         
         state['food_inventory'].append(new_item)
         
+        # 更新食物稳定性（基于库存总量）
+        total_quantity = sum(item['quantity'] for item in state['food_inventory'])
+        state['food_stability'] = min(100, total_quantity / 10.0)  # 每10单位=1%稳定性
+        
         log_entry = {
             'timestamp': datetime.datetime.utcnow().isoformat(),
             'log_type': 'INFO',
             'message': f'添加食物: {new_item["name"]} x{new_item["quantity"]}',
-            'ai_decision': 'AI已更新食物库存'
+            'ai_decision': 'AI已更新食物库存并重新计算预测'
         }
         logs.insert(0, log_entry)
         
-        return {'success': True, 'item': new_item}
+        return {'success': True, 'item': new_item, 'updated_status': self.get_current_status()}
     
     def remove_food_item(self, item_id, reason=''):
         """移除食物"""
@@ -620,15 +743,19 @@ class AISurvivalEngine:
         
         state['medical_items'].append(new_item)
         
+        # 更新医疗安全性（基于库存总量）
+        total_quantity = sum(item['quantity'] for item in state['medical_items'])
+        state['medical_safety'] = min(100, total_quantity / 5.0)  # 每5单位=1%安全性
+        
         log_entry = {
             'timestamp': datetime.datetime.utcnow().isoformat(),
             'log_type': 'INFO',
             'message': f'添加医疗物品: {new_item["name"]} ({new_item["type"]})',
-            'ai_decision': 'AI已更新医疗库存'
+            'ai_decision': 'AI已更新医疗库存并重新计算系统状态和预测'
         }
         logs.insert(0, log_entry)
         
-        return {'success': True, 'item': new_item}
+        return {'success': True, 'item': new_item, 'updated_status': self.get_current_status()}
     
     def update_medical_temp_range(self, min_temp, max_temp):
         """更新医疗温度范围"""
@@ -646,7 +773,7 @@ class AISurvivalEngine:
     
     def update_energy_distribution(self, distribution):
         """更新能源分配比例"""
-        state, _ = get_persistent_state()
+        state, logs = get_persistent_state()
         
         # 验证总和是否为100
         total = sum(distribution.values())
@@ -654,7 +781,26 @@ class AISurvivalEngine:
             return {'success': False, 'error': f'分配比例总和必须为100%，当前为{total}%'}
         
         state['energy_distribution'] = distribution
-        return {'success': True, 'distribution': distribution}
+        
+        # 根据能源分配重新计算能源水平
+        medical_alloc = distribution.get('medical', 25)
+        food_alloc = distribution.get('food', 25)
+        env_alloc = distribution.get('environment', 30)
+        other_alloc = distribution.get('other', 20)
+        
+        # 能源分配影响各系统效率
+        efficiency_factor = (medical_alloc + food_alloc + env_alloc) / 80.0
+        state['energy_level'] = min(100, state['energy_level'] * efficiency_factor)
+        
+        log_entry = {
+            'timestamp': datetime.datetime.utcnow().isoformat(),
+            'log_type': 'INFO',
+            'message': f'更新能源分配: 医疗{medical_alloc}%, 食物{food_alloc}%, 环境{env_alloc}%, 其他{other_alloc}%',
+            'ai_decision': 'AI已根据新的能源分配重新计算系统状态和预测'
+        }
+        logs.insert(0, log_entry)
+        
+        return {'success': True, 'distribution': distribution, 'updated_status': self.get_current_status()}
     
     def set_energy_saving_mode(self, mode):
         """设置节能模式"""
@@ -679,8 +825,30 @@ class AISurvivalEngine:
     
     def update_env_targets(self, targets):
         """更新环境目标值"""
-        state, _ = get_persistent_state()
+        state, logs = get_persistent_state()
+        
+        # 更新环境目标
+        old_targets = state['env_targets'].copy()
         state['env_targets'].update(targets)
+        
+        # 如果更新了氧气、温度或湿度，重新计算环境分数
+        if any(key in targets for key in ['oxygen', 'temperature', 'humidity']):
+            state['environment_score'] = (
+                state['oxygen_level'] + 
+                state['humidity'] * 2 + 
+                state['pressure']
+            ) / 3
+            
+            log_entry = {
+                'timestamp': datetime.datetime.utcnow().isoformat(),
+                'log_type': 'INFO',
+                'message': f'更新环境目标: {targets}',
+                'ai_decision': 'AI已根据新的环境目标重新计算系统状态和预测'
+            }
+            logs.insert(0, log_entry)
+            
+            return {'success': True, 'targets': state['env_targets'], 'updated_status': self.get_current_status()}
+        
         return {'success': True, 'targets': state['env_targets']}
     
     def update_env_alerts(self, alerts):
@@ -803,15 +971,20 @@ class AISurvivalEngine:
         state['crew_members'].append(new_member)
         state['crew_count'] = len(state['crew_members'])
         
+        # 乘员数量影响资源消耗率，重新计算预计生存天数
+        crew_count = state['crew_count']
+        food_consumption_rate = 2.0 * crew_count / 4.0
+        water_consumption_rate = 1.5 * crew_count / 4.0
+        
         log_entry = {
             'timestamp': datetime.datetime.utcnow().isoformat(),
             'log_type': 'INFO',
-            'message': f'添加宇航员: {new_member["name"]}',
-            'ai_decision': 'AI已更新人员配置'
+            'message': f'添加宇航员: {new_member["name"]} (当前乘员数: {crew_count})',
+            'ai_decision': f'AI已更新人员配置并重新计算资源消耗预测 (食物消耗率: {food_consumption_rate:.2f}/天, 水消耗率: {water_consumption_rate:.2f}/天)'
         }
         logs.insert(0, log_entry)
         
-        return {'success': True, 'member': new_member}
+        return {'success': True, 'member': new_member, 'updated_status': self.get_current_status()}
     
     def remove_crew_member(self, member_id):
         """移除宇航员"""

@@ -11,6 +11,8 @@ async function init() {
     
     // 2. 初始化图表
     const charts = initCharts();
+    // 将charts存储到window对象，供其他函数使用
+    window.charts = charts;
     
     // 3. 设置导航栏交互
     setupNavigation();
@@ -61,7 +63,7 @@ function setupNavigation() {
 }
 
 // 视图切换函数
-function switchView(module) {
+async function switchView(module) {
     // 隐藏所有视图
     document.querySelectorAll('.view-panel').forEach(view => {
         view.style.transition = 'opacity 0.3s ease';
@@ -72,7 +74,7 @@ function switchView(module) {
     });
     
     // 显示目标视图
-    setTimeout(() => {
+    setTimeout(async () => {
         const targetView = document.getElementById(`view-${module}`);
         if (targetView) {
             targetView.style.display = 'block';
@@ -82,8 +84,13 @@ function switchView(module) {
                 targetView.style.opacity = '1';
             }, 50);
             
-            // 加载模块内容
-            loadModuleContent(module);
+            // 等待模块内容加载完成
+            await loadModuleContent(module);
+            
+            // 内容加载完成后立即刷新数据以更新图表
+            if (window.charts) {
+                await refreshData(window.charts);
+            }
         }
     }, 300);
 }
@@ -269,7 +276,17 @@ async function addFoodItem() {
         const result = await response.json();
         if (result.success) {
             showToast('✅ 食物添加成功！');
-            loadFoodModule(); // 重新加载
+            // 清空表单
+            document.getElementById('food-name').value = '';
+            document.getElementById('food-quantity').value = '';
+            document.getElementById('food-nutrition').value = 'protein';
+            document.getElementById('food-expiry').value = '';
+            // 重新加载模块并刷新数据
+            await loadFoodModule();
+            // 刷新总控制台数据以更新生存指数和预测
+            await refreshData(window.charts);
+        } else {
+            showToast('❌ 添加失败: ' + (result.error || '未知错误'));
         }
     } catch (error) {
         console.error('Failed to add food:', error);
@@ -291,6 +308,10 @@ async function updateConsumptionRate() {
         const result = await response.json();
         if (result.success) {
             showToast('✅ 消耗速率已更新！');
+            // 刷新数据以显示最新状态
+            await refreshData(window.charts);
+        } else {
+            showToast('❌ ' + (result.error || '更新失败'));
         }
     } catch (error) {
         console.error('Failed to update consumption:', error);
@@ -312,6 +333,8 @@ async function toggleEmergencyRation() {
         const result = await response.json();
         if (result.success) {
             showToast(enabled ? '⚠️ 紧急配给模式已启用' : '✅ 已恢复正常配给');
+            // 刷新数据以显示最新状态
+            await refreshData(window.charts);
         }
     } catch (error) {
         console.error('Failed to toggle emergency ration:', error);
@@ -325,14 +348,18 @@ async function updateFoodWarnings() {
     const minStock = document.getElementById('food-min-stock').value;
     
     showToast(`✅ 预警设置已保存：过期${expiryWarning}天，最低库存${minStock}%`);
+    // 刷新数据以显示最新状态
+    await refreshData(window.charts);
 }
 
-function updateFoodZones() {
+async function updateFoodZones() {
     const zone1 = document.getElementById('food-zone1-temp').value;
     const zone2 = document.getElementById('food-zone2-temp').value;
     const zone3 = document.getElementById('food-zone3-temp').value;
     
     showToast(`✅ 温度区域已设置：冷冻${zone1}°C, 冷藏${zone2}°C, 深冷${zone3}°C`);
+    // 刷新数据以显示最新状态
+    await refreshData(window.charts);
 }
 
 function displayFoodInventory(data) {
@@ -430,6 +457,16 @@ async function addMedicalItem() {
         const result = await response.json();
         if (result.success) {
             showToast('✅ 医疗物品添加成功！');
+            // 清空表单
+            document.getElementById('medical-name').value = '';
+            document.getElementById('medical-quantity').value = '1';
+            document.getElementById('medical-temp').value = '-70';
+            // 重新加载模块并刷新数据
+            await loadMedicalModule();
+            // 刷新总控制台数据以更新生存指数和预测
+            await refreshData(window.charts);
+        } else {
+            showToast('❌ 添加失败: ' + (result.error || '未知错误'));
         }
     } catch (error) {
         console.error('Failed to add medical item:', error);
@@ -451,6 +488,8 @@ async function updateMedicalTempRange() {
         const result = await response.json();
         if (result.success) {
             showToast('✅ 温度范围已更新！');
+            // 刷新数据以显示最新状态
+            await refreshData(window.charts);
         }
     } catch (error) {
         console.error('Failed to update temp range:', error);
@@ -578,6 +617,8 @@ async function applyEnergyDistribution() {
         const result = await response.json();
         if (result.success) {
             showToast('✅ 能源分配已更新！');
+            // 刷新数据以显示最新状态
+            await refreshData(window.charts);
         } else {
             showToast('❌ ' + result.error);
         }
@@ -592,6 +633,8 @@ async function applyChargingStrategy() {
     const backupThreshold = document.getElementById('backup-power-threshold').value;
     
     showToast(`✅ 充电策略已设置：太阳能${solarHours}小时，备用电源${backupThreshold}%`);
+    // 刷新数据以显示最新状态
+    await refreshData(window.charts);
 }
 
 async function applyLowBatteryResponse() {
@@ -608,6 +651,8 @@ async function applyLowBatteryResponse() {
     if (keepNavigation) retained.push('导航系统');
     
     showToast(`✅ 低电量响应已配置：保留${retained.join('、')}`);
+    // 刷新数据以显示最新状态
+    await refreshData(window.charts);
 }
 
 // 环境控制模块
@@ -726,6 +771,10 @@ async function applyEnvTargets() {
         const result = await response.json();
         if (result.success) {
             showToast('✅ 环境参数已更新！');
+            // 刷新数据以显示最新状态
+            await refreshData(window.charts);
+        } else {
+            showToast('❌ ' + (result.error || '更新失败'));
         }
     } catch (error) {
         console.error('Failed to update env targets:', error);
@@ -739,6 +788,8 @@ async function applyEnvAlerts() {
     const tempAlert = document.getElementById('env-temp-alert').value;
     
     showToast(`✅ 警报设置已保存：CO₂上限${co2Max}%，氧气下限${oxygenAlert}%`);
+    // 刷新数据以显示最新状态
+    await refreshData(window.charts);
 }
 
 async function applyVentilationControl() {
@@ -746,6 +797,8 @@ async function applyVentilationControl() {
     const interval = document.getElementById('ventilation-interval').value;
     
     showToast(`✅ 通风控制已设置：${mode === 'auto' ? '自动' : mode === 'manual' ? '手动' : '应急'}模式，循环${interval}分钟`);
+    // 刷新数据以显示最新状态
+    await refreshData(window.charts);
 }
 
 async function applyEmergencyResponse() {
@@ -756,6 +809,8 @@ async function applyEmergencyResponse() {
     const purifyText = purificationPriority === 'co2' ? '去CO₂' : purificationPriority === 'particles' ? '过滤颗粒' : '平衡';
     
     showToast(`✅ 应急方案已配置：泄漏${leakText}，净化${purifyText}`);
+    // 刷新数据以显示最新状态
+    await refreshData(window.charts);
 }
 
 // 紧急协议模块
@@ -884,7 +939,9 @@ async function triggerEmergencyManual() {
         const result = await response.json();
         if (result.success) {
             showToast('⚠️ 紧急协议已触发！');
-            refreshData({ mainChart, gaugeChart, predictionChart });
+            await refreshData(window.charts);
+        } else {
+            showToast('❌ ' + (result.error || '触发失败'));
         }
     } catch (error) {
         console.error('Failed to trigger emergency:', error);
@@ -898,6 +955,8 @@ async function applyTriggerConfig() {
     const delay = document.getElementById('trigger-delay').value;
     
     showToast(`✅ 触发器配置已保存：氧气${oxygenThreshold}%，能源${energyThreshold}%，延迟${delay}秒`);
+    // 刷新数据以显示最新状态
+    await refreshData(window.charts);
 }
 
 async function applyActionConfig() {
@@ -911,6 +970,8 @@ async function applyActionConfig() {
     const confirmText = confirmation === 'auto' ? '自动' : confirmation === 'confirm' ? '需确认' : '手动';
     
     showToast(`✅ 动作配置已保存：执行${actions.join('、')}，确认方式：${confirmText}`);
+    // 刷新数据以显示最新状态
+    await refreshData(window.charts);
 }
 
 async function runEmergencyTest() {
@@ -925,6 +986,8 @@ async function runEmergencyTest() {
     }[scenario];
     
     showToast(`🧪 运行模拟测试：${scenarioText}（严重程度${severity}/10）`);
+    // 刷新数据以显示最新状态
+    await refreshData(window.charts);
 }
 
 // 宇航员管理模块
@@ -1047,7 +1110,17 @@ async function addCrewMember() {
         const result = await response.json();
         if (result.success) {
             showToast('✅ 宇航员添加成功！');
-            loadCrewModule(); // 重新加载
+            // 清空表单
+            document.getElementById('crew-name').value = '';
+            document.getElementById('crew-age').value = '30';
+            document.getElementById('crew-weight').value = '70';
+            document.getElementById('crew-health').value = 'good';
+            // 重新加载模块并刷新数据
+            await loadCrewModule();
+            // 刷新总控制台数据以更新生存指数和预测
+            await refreshData(window.charts);
+        } else {
+            showToast('❌ 添加失败: ' + (result.error || '未知错误'));
         }
     } catch (error) {
         console.error('Failed to add crew:', error);
@@ -1061,6 +1134,8 @@ async function applyNutritionSettings() {
     const allergies = document.getElementById('crew-allergies').value;
     
     showToast(`✅ 营养设置已保存：${calories}千卡/天${diet ? '，饮食：'+diet : ''}${allergies ? '，过敏：'+allergies : ''}`);
+    // 刷新数据以显示最新状态
+    await refreshData(window.charts);
 }
 
 async function applyActivitySchedule() {
@@ -1071,6 +1146,8 @@ async function applyActivitySchedule() {
     const levelText = activityLevel === 'low' ? '低消耗' : activityLevel === 'normal' ? '正常' : '高消耗';
     
     showToast(`✅ 日程安排已保存：休息${restHours}小时，${levelText}模式`);
+    // 刷新数据以显示最新状态
+    await refreshData(window.charts);
 }
 
 function displayCrewList(crew) {
@@ -1207,6 +1284,8 @@ async function setAIAutomation() {
         const result = await response.json();
         if (result.success) {
             showToast('✅ AI自动化级别已更新！');
+            // 刷新数据以显示最新状态
+            await refreshData(window.charts);
         }
     } catch (error) {
         console.error('Failed to set AI level:', error);
@@ -1221,6 +1300,8 @@ async function applyTaskParameters() {
     const resupplyInterval = document.getElementById('resupply-interval').value;
     
     showToast(`✅ 任务参数已设置：${crewCount}人，${duration}天，${activityLevel === 'low' ? '低' : activityLevel === 'normal' ? '正常' : '高'}强度，补给间隔${resupplyInterval}天`);
+    // 刷新数据以显示最新状态
+    await refreshData(window.charts);
 }
 
 async function runScenarioSimulation() {
@@ -1248,12 +1329,16 @@ async function runScenarioSimulation() {
     }[strategy];
     
     showToast(`🧪 运行模拟：${scenarioText}（风险${risk}%），策略：${strategyText}`);
+    // 刷新数据以显示最新状态
+    await refreshData(window.charts);
 }
 
 async function applyAIPreferences() {
     const riskTolerance = document.getElementById('ai-risk-tolerance').value;
     
     showToast(`✅ AI偏好已设置：风险承受度${riskTolerance}%`);
+    // 刷新数据以显示最新状态
+    await refreshData(window.charts);
 }
 
 // 通信与报告模块
@@ -1325,8 +1410,10 @@ async function loadSettingsModule() {
     `;
 }
 
-function applySettings() {
+async function applySettings() {
     showToast('✅ 设置已保存（演示功能）');
+    // 刷新数据以显示最新状态
+    await refreshData(window.charts);
 }
 
 // 设置滑块输入监听
@@ -1366,7 +1453,9 @@ async function applyCustomInput() {
         if (result.success) {
             showToast('✅ 参数已更新！');
             // 立即刷新数据
-            refreshData({ mainChart, gaugeChart, predictionChart });
+            await refreshData(window.charts);
+        } else {
+            showToast('❌ ' + (result.error || '更新失败'));
         }
     } catch (error) {
         console.error('Failed to apply custom input:', error);
@@ -1471,7 +1560,9 @@ async function applyAdjustments() {
             // 显示成功提示
             showToast('✅ 参数调整已应用！');
             // 立即刷新数据
-            refreshData({ mainChart, gaugeChart, predictionChart });
+            await refreshData(window.charts);
+        } else {
+            showToast('❌ ' + (result.error || '调整失败'));
         }
     } catch (error) {
         console.error('Failed to apply adjustments:', error);
@@ -1638,6 +1729,13 @@ async function refreshData(charts) {
             return;
         }
         
+        console.log('=== 数据刷新 ===');
+        console.log('生存状态:', survivalStatus);
+        console.log('食物系统:', foodSystem);
+        console.log('医疗系统:', medicalSystem);
+        console.log('环境系统:', environment);
+        console.log('能源系统:', energy);
+        
         // 1. 更新紧急协议模式
         if (survivalStatus.emergency_mode) {
             triggerEmergencyAnimation();
@@ -1645,7 +1743,7 @@ async function refreshData(charts) {
             exitEmergencyAnimation();
         }
         
-        // 2. 更新仪表盘数据
+        // 2. 更新仪表盘数据（总控制台雷达图）
         updateDashboardView(survivalStatus);
         
         // 3. 更新生存指数仪表盘
@@ -1668,7 +1766,7 @@ async function refreshData(charts) {
             animateNumberWithSuffix(survivalTimeEl, survivalStatus.estimated_survival_days, ' DAYS');
         }
         
-        // 6. 更新预测时间线
+        // 6. 更新预测时间线（基于后端计算的结果）
         if (predictionChart && survivalStatus.predictions) {
             predictionChart.setOption({
                 xAxis: { data: ['D+30', 'D+60', 'D+90', 'D+120'] },
@@ -1676,21 +1774,24 @@ async function refreshData(charts) {
             });
         }
         
-        // 7. 根据当前模块更新对应图表
-        if (currentModule === 'food' && foodSystem) {
-            updateFoodView(foodSystem);
-        } else if (currentModule === 'medical' && medicalSystem) {
-            updateMedicalView(medicalSystem);
-        } else if (currentModule === 'energy' && energy) {
-            updateEnergyView(energy);
-        } else if (currentModule === 'env' && environment) {
-            updateEnvView(environment);
+        // 7. 根据当前模块更新对应图表（传递完整数据）
+        if (currentModule === 'food') {
+            // 食物页面：合并生存状态和食物系统数据
+            updateFoodView({...survivalStatus, ...foodSystem});
+        } else if (currentModule === 'medical') {
+            updateMedicalView({...survivalStatus, ...medicalSystem});
+        } else if (currentModule === 'energy') {
+            updateEnergyView({...survivalStatus, ...energy});
+        } else if (currentModule === 'env') {
+            updateEnvView({...survivalStatus, ...environment});
         }
         
         // 8. 更新AI日志
         if (aiLogs && aiLogs.length > 0) {
             updateAILogs(aiLogs);
         }
+        
+        console.log('=== 数据刷新完成 ===');
         
     } catch (error) {
         console.error('Error refreshing data:', error);

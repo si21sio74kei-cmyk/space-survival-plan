@@ -23,8 +23,9 @@ app = Flask(__name__,
 # Vercel Serverless架构：每次请求时自动执行模拟
 @app.before_request
 def auto_simulate():
-    """每次API请求前自动执行系统模拟（Vercel兼容）"""
-    if request.path.startswith('/api/'):
+    """Vercel兼容：仅在特定路径执行模拟（避免每次请求都卡顿）"""
+    # 只在访问首页时执行一次模拟，而不是每次API请求
+    if request.path == '/' or request.path == '/index.html':
         try:
             ai_engine.simulate_step()
         except Exception as e:
@@ -53,7 +54,18 @@ def get_survival_status():
         "medical_safety": round(status['medical_safety'], 1),
         "environment_score": round(status['environment_score'], 1),
         "base_stability": round(status['base_stability'], 1),
-        "estimated_survival_days": status['estimated_survival_days']
+        "estimated_survival_days": status['estimated_survival_days'],
+        # 添加前端图表所需的额外字段
+        "water_reserve": round(status['water_reserve'], 1),
+        "oxygen_level": round(status['oxygen_level'], 1),
+        "protein_level": round(status['protein_level'], 1),
+        "humidity": round(status['humidity'], 1),
+        "pressure": round(status['pressure'], 1),
+        "radiation_level": round(status['radiation_level'], 1),
+        "backup_power_hours": round(status['backup_power_hours'], 1),
+        "emergency_mode": status.get('emergency_mode', False),
+        "predictions": status.get('predictions', [70, 60, 50, 40]),
+        "diet_advice": status.get('diet_advice', '标准配给')
     })
 
 @app.route('/api/food-inventory')
@@ -273,8 +285,6 @@ def remove_crew(member_id):
 @app.route('/api/crew/list')
 def list_crew():
     """获取宇航员列表"""
-    state, _ = ai_engine.__class__.__bases__[0].__dict__.get('get_persistent_state', lambda: ([], []))()
-    # 简化处理，直接返回状态中的crew_members
     from ai_engine import get_persistent_state
     state, _ = get_persistent_state()
     return jsonify(state['crew_members'])
