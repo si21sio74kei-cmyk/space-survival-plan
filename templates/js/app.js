@@ -343,13 +343,26 @@ async function toggleEmergencyRation() {
 }
 
 async function updateFoodWarnings() {
-    // 注意：这些设置目前保存在本地状态，后端API可扩展
     const expiryWarning = document.getElementById('food-expiry-warning').value;
     const minStock = document.getElementById('food-min-stock').value;
     
-    showToast(`✅ 预警设置已保存：过期${expiryWarning}天，最低库存${minStock}%`);
-    // 刷新数据以显示最新状态
-    await refreshData(window.charts);
+    try {
+        const response = await fetch('/api/food/warnings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ expiry_days: parseInt(expiryWarning), min_stock: parseInt(minStock) })
+        });
+        const result = await response.json();
+        if (result.success) {
+            showToast(`✅ 预警设置已保存：过期${expiryWarning}天，最低库存${minStock}%`);
+            await refreshData(window.charts);
+        } else {
+            showToast('❌ 保存失败');
+        }
+    } catch (error) {
+        console.error('Failed to update food warnings:', error);
+        showToast('❌ 保存失败');
+    }
 }
 
 async function updateFoodZones() {
@@ -357,9 +370,23 @@ async function updateFoodZones() {
     const zone2 = document.getElementById('food-zone2-temp').value;
     const zone3 = document.getElementById('food-zone3-temp').value;
     
-    showToast(`✅ 温度区域已设置：冷冻${zone1}°C, 冷藏${zone2}°C, 深冷${zone3}°C`);
-    // 刷新数据以显示最新状态
-    await refreshData(window.charts);
+    try {
+        const response = await fetch('/api/food/zones', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ zone1: parseFloat(zone1), zone2: parseFloat(zone2), zone3: parseFloat(zone3) })
+        });
+        const result = await response.json();
+        if (result.success) {
+            showToast(`✅ 温度区域已设置：冷冻${zone1}°C, 冷藏${zone2}°C, 深冷${zone3}°C`);
+            await refreshData(window.charts);
+        } else {
+            showToast('❌ 保存失败');
+        }
+    } catch (error) {
+        console.error('Failed to update food zones:', error);
+        showToast(' 保存失败');
+    }
 }
 
 function displayFoodInventory(data) {
@@ -632,9 +659,23 @@ async function applyChargingStrategy() {
     const solarHours = document.getElementById('solar-charging-hours').value;
     const backupThreshold = document.getElementById('backup-power-threshold').value;
     
-    showToast(`✅ 充电策略已设置：太阳能${solarHours}小时，备用电源${backupThreshold}%`);
-    // 刷新数据以显示最新状态
-    await refreshData(window.charts);
+    try {
+        const response = await fetch('/api/energy/charging-strategy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ solar_hours: parseInt(solarHours), backup_threshold: parseInt(backupThreshold) })
+        });
+        const result = await response.json();
+        if (result.success) {
+            showToast(`✅ 充电策略已设置：太阳能${solarHours}小时，备用电源${backupThreshold}%`);
+            await refreshData(window.charts);
+        } else {
+            showToast('❌ 保存失败');
+        }
+    } catch (error) {
+        console.error('Failed to update charging strategy:', error);
+        showToast(' 保存失败');
+    }
 }
 
 async function applyLowBatteryResponse() {
@@ -645,14 +686,34 @@ async function applyLowBatteryResponse() {
     const keepNavigation = document.getElementById('keep-navigation').checked;
     
     const retained = [];
-    if (keepLifeSupport) retained.push('生命支持');
-    if (keepCommunications) retained.push('通信系统');
-    if (keepMedical) retained.push('医疗设备');
-    if (keepNavigation) retained.push('导航系统');
+    if (keepLifeSupport) retained.push('life_support');
+    if (keepCommunications) retained.push('communications');
+    if (keepMedical) retained.push('medical');
+    if (keepNavigation) retained.push('navigation');
     
-    showToast(`✅ 低电量响应已配置：保留${retained.join('、')}`);
-    // 刷新数据以显示最新状态
-    await refreshData(window.charts);
+    const retainedText = [];
+    if (keepLifeSupport) retainedText.push('生命支持');
+    if (keepCommunications) retainedText.push('通信系统');
+    if (keepMedical) retainedText.push('医疗设备');
+    if (keepNavigation) retainedText.push('导航系统');
+    
+    try {
+        const response = await fetch('/api/energy/low-battery-response', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ shutdown_sequence: sequence, retained_functions: retained })
+        });
+        const result = await response.json();
+        if (result.success) {
+            showToast(`✅ 低电量响应已配置：保留${retainedText.join('、')}`);
+            await refreshData(window.charts);
+        } else {
+            showToast('❌ 保存失败');
+        }
+    } catch (error) {
+        console.error('Failed to update low battery response:', error);
+        showToast('❌ 保存失败');
+    }
 }
 
 // 环境控制模块
@@ -787,18 +848,46 @@ async function applyEnvAlerts() {
     const oxygenAlert = document.getElementById('env-oxygen-alert').value;
     const tempAlert = document.getElementById('env-temp-alert').value;
     
-    showToast(`✅ 警报设置已保存：CO₂上限${co2Max}%，氧气下限${oxygenAlert}%`);
-    // 刷新数据以显示最新状态
-    await refreshData(window.charts);
+    try {
+        const response = await fetch('/api/environment/alerts-config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ co2_max: parseFloat(co2Max), oxygen_alert: parseFloat(oxygenAlert), temp_alert: tempAlert })
+        });
+        const result = await response.json();
+        if (result.success) {
+            showToast(`✅ 警报设置已保存：CO₂上限${co2Max}%，氧气下限${oxygenAlert}%`);
+            await refreshData(window.charts);
+        } else {
+            showToast('❌ 保存失败');
+        }
+    } catch (error) {
+        console.error('Failed to update env alerts:', error);
+        showToast('❌ 保存失败');
+    }
 }
 
 async function applyVentilationControl() {
     const mode = document.getElementById('ventilation-mode').value;
     const interval = document.getElementById('ventilation-interval').value;
     
-    showToast(`✅ 通风控制已设置：${mode === 'auto' ? '自动' : mode === 'manual' ? '手动' : '应急'}模式，循环${interval}分钟`);
-    // 刷新数据以显示最新状态
-    await refreshData(window.charts);
+    try {
+        const response = await fetch('/api/environment/ventilation-config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mode, interval: parseInt(interval) })
+        });
+        const result = await response.json();
+        if (result.success) {
+            showToast(`✅ 通风控制已设置：${mode === 'auto' ? '自动' : mode === 'manual' ? '手动' : '应急'}模式，循环${interval}分钟`);
+            await refreshData(window.charts);
+        } else {
+            showToast('❌ 保存失败');
+        }
+    } catch (error) {
+        console.error('Failed to update ventilation:', error);
+        showToast('❌ 保存失败');
+    }
 }
 
 async function applyEmergencyResponse() {
@@ -808,9 +897,23 @@ async function applyEmergencyResponse() {
     const leakText = leakResponse === 'isolate' ? '隔离' : leakResponse === 'boost' ? '增氧' : '撤离';
     const purifyText = purificationPriority === 'co2' ? '去CO₂' : purificationPriority === 'particles' ? '过滤颗粒' : '平衡';
     
-    showToast(`✅ 应急方案已配置：泄漏${leakText}，净化${purifyText}`);
-    // 刷新数据以显示最新状态
-    await refreshData(window.charts);
+    try {
+        const response = await fetch('/api/environment/emergency-response', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ leak_response: leakResponse, purification_priority: purificationPriority })
+        });
+        const result = await response.json();
+        if (result.success) {
+            showToast(`✅ 应急方案已配置：泄漏${leakText}，净化${purifyText}`);
+            await refreshData(window.charts);
+        } else {
+            showToast('❌ 保存失败');
+        }
+    } catch (error) {
+        console.error('Failed to update emergency response:', error);
+        showToast('❌ 保存失败');
+    }
 }
 
 // 紧急协议模块
@@ -1133,9 +1236,23 @@ async function applyNutritionSettings() {
     const diet = document.getElementById('crew-diet').value;
     const allergies = document.getElementById('crew-allergies').value;
     
-    showToast(`✅ 营养设置已保存：${calories}千卡/天${diet ? '，饮食：'+diet : ''}${allergies ? '，过敏：'+allergies : ''}`);
-    // 刷新数据以显示最新状态
-    await refreshData(window.charts);
+    try {
+        const response = await fetch('/api/crew/nutrition', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ calories: parseInt(calories), diet, allergies })
+        });
+        const result = await response.json();
+        if (result.success) {
+            showToast(`✅ 营养设置已保存：${calories}千卡/天${diet ? '，饮食：'+diet : ''}${allergies ? '，过敏：'+allergies : ''}`);
+            await refreshData(window.charts);
+        } else {
+            showToast('❌ 保存失败');
+        }
+    } catch (error) {
+        console.error('Failed to update nutrition settings:', error);
+        showToast('❌ 保存失败');
+    }
 }
 
 async function applyActivitySchedule() {
@@ -1145,9 +1262,23 @@ async function applyActivitySchedule() {
     
     const levelText = activityLevel === 'low' ? '低消耗' : activityLevel === 'normal' ? '正常' : '高消耗';
     
-    showToast(`✅ 日程安排已保存：休息${restHours}小时，${levelText}模式`);
-    // 刷新数据以显示最新状态
-    await refreshData(window.charts);
+    try {
+        const response = await fetch('/api/crew/schedule', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ schedule, rest_hours: parseFloat(restHours), activity_adjustment: activityLevel })
+        });
+        const result = await response.json();
+        if (result.success) {
+            showToast(`✅ 日程安排已保存：休息${restHours}小时，${levelText}模式`);
+            await refreshData(window.charts);
+        } else {
+            showToast('❌ 保存失败');
+        }
+    } catch (error) {
+        console.error('Failed to update activity schedule:', error);
+        showToast('❌ 保存失败');
+    }
 }
 
 function displayCrewList(crew) {
@@ -1299,9 +1430,28 @@ async function applyTaskParameters() {
     const activityLevel = document.getElementById('task-activity-level').value;
     const resupplyInterval = document.getElementById('resupply-interval').value;
     
-    showToast(`✅ 任务参数已设置：${crewCount}人，${duration}天，${activityLevel === 'low' ? '低' : activityLevel === 'normal' ? '正常' : '高'}强度，补给间隔${resupplyInterval}天`);
-    // 刷新数据以显示最新状态
-    await refreshData(window.charts);
+    try {
+        const response = await fetch('/api/ai/task-parameters', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                crew_count: parseInt(crewCount),
+                duration: parseInt(duration),
+                activity_level: activityLevel,
+                resupply_interval: parseInt(resupplyInterval)
+            })
+        });
+        const result = await response.json();
+        if (result.success) {
+            showToast(`✅ 任务参数已设置：${crewCount}人，${duration}天，${activityLevel === 'low' ? '低' : activityLevel === 'normal' ? '正常' : '高'}强度，补给间隔${resupplyInterval}天`);
+            await refreshData(window.charts);
+        } else {
+            showToast('❌ 保存失败');
+        }
+    } catch (error) {
+        console.error('Failed to update task parameters:', error);
+        showToast(' 保存失败');
+    }
 }
 
 async function runScenarioSimulation() {
@@ -1336,9 +1486,23 @@ async function runScenarioSimulation() {
 async function applyAIPreferences() {
     const riskTolerance = document.getElementById('ai-risk-tolerance').value;
     
-    showToast(`✅ AI偏好已设置：风险承受度${riskTolerance}%`);
-    // 刷新数据以显示最新状态
-    await refreshData(window.charts);
+    try {
+        const response = await fetch('/api/ai/preferences', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ risk_tolerance: parseInt(riskTolerance) })
+        });
+        const result = await response.json();
+        if (result.success) {
+            showToast(`✅ AI偏好已设置：风险承受度${riskTolerance}%`);
+            await refreshData(window.charts);
+        } else {
+            showToast('❌ 保存失败');
+        }
+    } catch (error) {
+        console.error('Failed to update AI preferences:', error);
+        showToast('❌ 保存失败');
+    }
 }
 
 // 通信与报告模块

@@ -156,6 +156,22 @@ def toggle_emergency_ration():
     result = ai_engine.toggle_emergency_ration(enabled, percentage)
     return jsonify(result)
 
+@app.route('/api/food/warnings', methods=['POST'])
+def update_food_warnings_api():
+    """更新食物预警设置"""
+    data = request.get_json() or {}
+    result = ai_engine.update_food_warnings(data.get('expiry_days', 7), data.get('min_stock', 20))
+    return jsonify(result)
+
+@app.route('/api/food/zones', methods=['POST'])
+def update_food_zones_api():
+    """更新食物温度区域"""
+    data = request.get_json() or {}
+    result = ai_engine.update_food_zones(
+        data.get('zone1', -18), data.get('zone2', 4), data.get('zone3', -70)
+    )
+    return jsonify(result)
+
 # ==================== 医疗冷链管理 API ====================
 
 @app.route('/api/medical/add', methods=['POST'])
@@ -199,6 +215,24 @@ def set_energy_saving():
     result = ai_engine.set_energy_saving_mode(mode)
     return jsonify(result)
 
+@app.route('/api/energy/charging-strategy', methods=['POST'])
+def update_charging_strategy_api():
+    """更新充电策略"""
+    data = request.get_json() or {}
+    result = ai_engine.update_charging_strategy(
+        data.get('solar_hours', 8), data.get('backup_threshold', 30)
+    )
+    return jsonify(result)
+
+@app.route('/api/energy/low-battery-response', methods=['POST'])
+def update_low_battery_response_api():
+    """更新低电量响应配置"""
+    data = request.get_json() or {}
+    result = ai_engine.update_low_battery_response(
+        data.get('shutdown_sequence', ''), data.get('retained_functions', [])
+    )
+    return jsonify(result)
+
 # ==================== 环境控制 API ====================
 
 @app.route('/api/environment/targets', methods=['POST'])
@@ -222,6 +256,33 @@ def set_ventilation():
     mode = data.get('mode', 'auto')
     cycle = data.get('cycle', 30)
     result = ai_engine.set_ventilation_mode(mode, cycle)
+    return jsonify(result)
+
+@app.route('/api/environment/alerts-config', methods=['POST'])
+def update_env_alerts_config_api():
+    """更新环境警报配置"""
+    data = request.get_json() or {}
+    result = ai_engine.update_env_alerts_config(
+        data.get('co2_max', 0.5), data.get('oxygen_alert', 19.5), data.get('temp_alert', '')
+    )
+    return jsonify(result)
+
+@app.route('/api/environment/ventilation-config', methods=['POST'])
+def update_ventilation_config_api():
+    """更新通风控制配置"""
+    data = request.get_json() or {}
+    result = ai_engine.update_ventilation(
+        data.get('mode', 'auto'), data.get('interval', 30)
+    )
+    return jsonify(result)
+
+@app.route('/api/environment/emergency-response', methods=['POST'])
+def update_emergency_response_api():
+    """更新应急响应方案"""
+    data = request.get_json() or {}
+    result = ai_engine.update_emergency_response(
+        data.get('leak_response', 'isolate'), data.get('purification_priority', 'co2')
+    )
     return jsonify(result)
 
 # ==================== AI预测与决策 API ====================
@@ -248,6 +309,16 @@ def set_ai_prefs():
     risk_tolerance = data.get('risk_tolerance', 50)
     priority = data.get('priority', 'survival')
     result = ai_engine.set_ai_preferences(risk_tolerance, priority)
+    return jsonify(result)
+
+@app.route('/api/ai/task-parameters', methods=['POST'])
+def update_task_parameters_api():
+    """更新任务参数"""
+    data = request.get_json() or {}
+    result = ai_engine.update_task_parameters(
+        data.get('crew_count', 4), data.get('duration', 365),
+        data.get('activity_level', 'normal'), data.get('resupply_interval', 90)
+    )
     return jsonify(result)
 
 # ==================== 紧急协议 API ====================
@@ -288,6 +359,24 @@ def list_crew():
     from ai_engine import get_persistent_state
     state, _ = get_persistent_state()
     return jsonify(state['crew_members'])
+
+@app.route('/api/crew/nutrition', methods=['POST'])
+def update_nutrition_api():
+    """更新营养需求设置"""
+    data = request.get_json() or {}
+    result = ai_engine.update_nutrition_settings(
+        data.get('calories', 2500), data.get('diet', ''), data.get('allergies', '')
+    )
+    return jsonify(result)
+
+@app.route('/api/crew/schedule', methods=['POST'])
+def update_schedule_api():
+    """更新活动日程安排"""
+    data = request.get_json() or {}
+    result = ai_engine.update_activity_schedule(
+        data.get('schedule', ''), data.get('rest_hours', 8), data.get('activity_adjustment', 'normal')
+    )
+    return jsonify(result)
 
 # ==================== 通信与日志 API ====================
 

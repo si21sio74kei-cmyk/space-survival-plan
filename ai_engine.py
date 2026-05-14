@@ -898,6 +898,114 @@ class AISurvivalEngine:
         state['ai_priority_preference'] = priority
         return {'success': True, 'risk_tolerance': risk_tolerance, 'priority': priority}
     
+    def update_food_warnings(self, expiry_days, min_stock):
+        """更新食物预警设置"""
+        state, logs = get_persistent_state()
+        state['food_expiry_warning_days'] = int(expiry_days)
+        state['food_min_stock_warning'] = int(min_stock)
+        return {'success': True}
+    
+    def update_food_zones(self, zone1, zone2, zone3):
+        """更新食物温度区域"""
+        state, _ = get_persistent_state()
+        state['food_temperature_zones'] = {'zone1': float(zone1), 'zone2': float(zone2), 'zone3': float(zone3)}
+        return {'success': True}
+    
+    def update_charging_strategy(self, solar_hours, backup_threshold):
+        """更新充电策略"""
+        state, _ = get_persistent_state()
+        state['solar_charging_hours'] = int(solar_hours)
+        state['backup_power_threshold'] = int(backup_threshold)
+        return {'success': True}
+    
+    def update_low_battery_response(self, shutdown_sequence, retained_functions):
+        """更新低电量响应配置"""
+        state, logs = get_persistent_state()
+        state['low_battery_shutdown_sequence'] = shutdown_sequence
+        state['low_battery_response'] = retained_functions
+        log_entry = {
+            'timestamp': datetime.datetime.utcnow().isoformat(),
+            'log_type': 'INFO',
+            'message': f'低电量响应配置更新: 保留{retained_functions}',
+            'ai_decision': 'AI已更新低电量响应策略'
+        }
+        logs.insert(0, log_entry)
+        return {'success': True}
+    
+    def update_env_alerts_config(self, co2_max, oxygen_alert, temp_alert):
+        """更新环境警报配置"""
+        state, _ = get_persistent_state()
+        state['env_alerts']['co2_max'] = float(co2_max)
+        state['env_alerts']['oxygen_min'] = float(oxygen_alert)
+        if temp_alert and '-' in temp_alert:
+            parts = temp_alert.split('-')
+            state['env_alerts']['temp_min'] = float(parts[0])
+            state['env_alerts']['temp_max'] = float(parts[1])
+        return {'success': True}
+    
+    def update_ventilation(self, mode, interval):
+        """更新通风控制"""
+        state, _ = get_persistent_state()
+        state['ventilation_mode'] = mode
+        state['ventilation_cycle'] = int(interval)
+        return {'success': True}
+    
+    def update_emergency_response(self, leak_response, purification_priority):
+        """更新应急响应方案"""
+        state, logs = get_persistent_state()
+        state['emergency_oxygen_leak_response'] = leak_response
+        state['emergency_air_purification_priority'] = purification_priority
+        log_entry = {
+            'timestamp': datetime.datetime.utcnow().isoformat(),
+            'log_type': 'INFO',
+            'message': f'应急响应方案更新: 泄漏{leak_response}，净化{purification_priority}',
+            'ai_decision': 'AI已更新应急响应方案'
+        }
+        logs.insert(0, log_entry)
+        return {'success': True}
+    
+    def update_task_parameters(self, crew_count, duration, activity_level, resupply_interval):
+        """更新任务参数"""
+        state, logs = get_persistent_state()
+        old_crew = state['crew_count']
+        state['crew_count'] = int(crew_count)
+        state['task_duration'] = int(duration)
+        state['activity_level'] = activity_level
+        state['resupply_interval'] = int(resupply_interval)
+        
+        if old_crew != state['crew_count']:
+            log_entry = {
+                'timestamp': datetime.datetime.utcnow().isoformat(),
+                'log_type': 'INFO',
+                'message': f'任务参数更新: {old_crew}人→{state["crew_count"]}人，任务{duration}天',
+                'ai_decision': 'AI已根据乘员变化重新计算资源消耗预测'
+            }
+            logs.insert(0, log_entry)
+        return {'success': True}
+    
+    def update_nutrition_settings(self, calories, diet, allergies):
+        """更新营养需求设置"""
+        state, _ = get_persistent_state()
+        state['daily_calorie_needs'] = int(calories)
+        state['diet_requirements'] = diet
+        state['crew_allergies'] = allergies
+        return {'success': True}
+    
+    def update_activity_schedule(self, schedule, rest_hours, activity_adjustment):
+        """更新活动日程安排"""
+        state, logs = get_persistent_state()
+        state['daily_schedule'] = schedule
+        state['rest_hours'] = float(rest_hours)
+        state['activity_adjustment'] = activity_adjustment
+        log_entry = {
+            'timestamp': datetime.datetime.utcnow().isoformat(),
+            'log_type': 'INFO',
+            'message': f'日程安排更新: 休息{rest_hours}小时，{activity_adjustment}模式',
+            'ai_decision': 'AI已更新活动日程并调整资源消耗预测'
+        }
+        logs.insert(0, log_entry)
+        return {'success': True}
+    
     # ==================== 紧急协议 ====================
     
     def configure_emergency_protocol(self, protocol_data):
