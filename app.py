@@ -23,15 +23,12 @@ app = Flask(__name__,
 # Vercel Serverless架构：每次请求时自动执行模拟
 @app.before_request
 def auto_simulate():
-    """Vercel兼容：每次API请求都执行模拟，确保数据动态变化"""
-    # 跳过静态文件请求
-    if request.path.startswith('/static/') or request.path.endswith('.css') or request.path.endswith('.js'):
-        return
-    
-    try:
-        ai_engine.simulate_step()
-    except Exception as e:
-        print(f"Auto-simulate error: {e}")
+    """只在访问首页时执行模拟，避免API请求频繁触发"""
+    if request.path == '/' or request.path == '/index.html':
+        try:
+            ai_engine.simulate_step()
+        except Exception as e:
+            print(f"Auto-simulate error: {e}")
 
 # ==================== 页面路由 ====================
 
@@ -349,6 +346,23 @@ def simulate_emergency_scenario():
     strategy = data.get('strategy', 'survival-first')
     result = ai_engine.run_simulation(scenario, severity, strategy)
     return jsonify(result)
+
+@app.route('/api/simulate_step', methods=['POST'])
+def manual_simulate_step():
+    """手动触发模拟步骤（用于前端定时调用）"""
+    try:
+        ai_engine.simulate_step()
+        state, logs = ai_engine.get_state_and_logs()
+        return jsonify({
+            'success': True,
+            'state': state,
+            'message': f'Day {state["mission_day"]} simulation completed'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 @app.route('/api/system/settings', methods=['POST'])
 def update_system_settings_api():

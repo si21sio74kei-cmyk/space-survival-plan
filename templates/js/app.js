@@ -1,6 +1,31 @@
 // 主入口模块 - 负责系统初始化和自动刷新
 let currentModule = 'dashboard';
 let refreshInterval = null;
+let simulationTimer = null; // 模拟定时器
+
+// ==================== localStorage状态管理 ====================
+function saveStateToLocalStorage(state) {
+    try {
+        localStorage.setItem('spaceSurvivalState', JSON.stringify(state));
+        console.log('State saved to localStorage');
+    } catch (e) {
+        console.error('Failed to save state:', e);
+    }
+}
+
+function loadStateFromLocalStorage() {
+    try {
+        const saved = localStorage.getItem('spaceSurvivalState');
+        return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+        console.error('Failed to load state:', e);
+        return null;
+    }
+}
+
+function clearStateFromLocalStorage() {
+    localStorage.removeItem('spaceSurvivalState');
+}
 
 // 初始化系统
 async function init() {
@@ -23,7 +48,10 @@ async function init() {
     // 5. 启动自动刷新（每3秒）
     startAutoRefresh(charts);
     
-    // 6. 立即执行一次数据刷新
+    // 6. 启动模拟定时器（每分钟+1天）
+    startSimulation();
+    
+    // 7. 立即执行一次数据刷新
     await refreshData(charts);
     
     console.log('System initialized successfully.');
@@ -1751,6 +1779,39 @@ function stopAutoRefresh() {
     }
 }
 
+// ==================== 模拟控制 ====================
+function startSimulation() {
+    // 每分钟执行一次模拟（+1天）
+    simulationTimer = setInterval(async () => {
+        try {
+            const response = await fetch('/api/simulate_step', { method: 'POST' });
+            const data = await response.json();
+            
+            if (data.success) {
+                console.log(`Simulation step completed: Day ${data.state.mission_day}`);
+                // 保存状态到localStorage
+                saveStateToLocalStorage(data.state);
+                // 立即刷新界面
+                if (window.charts) {
+                    await refreshData(window.charts);
+                }
+            }
+        } catch (error) {
+            console.error('Simulation step failed:', error);
+        }
+    }, 60000); // 60秒 = 1分钟
+    
+    console.log('Simulation timer started (1 day per minute)');
+}
+
+function stopSimulation() {
+    if (simulationTimer) {
+        clearInterval(simulationTimer);
+        simulationTimer = null;
+        console.log('Simulation timer stopped.');
+    }
+}
+
 // 显示调整表单
 function showAdjustmentForm(module) {
     const formContainer = document.getElementById('adjustment-form');
@@ -2052,6 +2113,9 @@ async function refreshData(charts) {
         if (aiLogs && aiLogs.length > 0) {
             updateAILogs(aiLogs);
         }
+        
+        // 9. 保存状态到localStorage（用于页面刷新后恢复）
+        saveStateToLocalStorage(survivalStatus);
         
         console.log('=== 数据刷新完成 ===');
         
