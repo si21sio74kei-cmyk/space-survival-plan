@@ -1882,9 +1882,9 @@ function startSimulation() {
         } catch (error) {
             console.error('Simulation step failed:', error);
         }
-    }, 60000); // 60秒 = 1分钟
+    }, 300000); // 300秒 = 5分钟
     
-    console.log('Simulation timer started (1 day per minute)');
+    console.log('Simulation timer started (1 day per 5 minutes)');
 }
 
 function stopSimulation() {
