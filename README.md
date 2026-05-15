@@ -22,12 +22,12 @@ DeepSpace AI Survival Cold-Chain Decision System - Mars Habitat Control Platform
 - FastAPI
 - SQLite
 - WebSocket（实时通信）
-- 智谱 GLM-4-AIR（AI决策引擎）
+- DeepSeek Chat（AI决策引擎）
 
 ## 核心功能
 
 ### 1. AI 自主决策系统
-- 实时调用智谱 GLM-4-AIR 生成决策建议
+- 实时调用 DeepSeek Chat 生成决策建议
 - 多系统联动逻辑（能源/辐射/食物）
 - 紧急协议模式自动触发
 
@@ -75,7 +75,7 @@ git push -u origin main
 2. 点击 "New Project"
 3. 导入 GitHub 仓库
 4. 配置环境变量：
-   - `ZHIPU_API_KEY`: 您的智谱 API Key
+   - `DEEPSEEK_API_KEY`: 您的 DeepSeek API Key
 5. 点击 "Deploy"
 
 ## 系统架构
@@ -89,7 +89,7 @@ git push -u origin main
                │ WebSocket
 ┌──────────────▼──────────────────────┐
 │      Backend (FastAPI)              │
-│  ├─ AI Engine (GLM-4-AIR)          │
+│  ├─ AI Engine (DeepSeek Chat)      │
 │  ├─ Survival Logic                 │
 │  ├─ Resource Management            │
 │  └─ SQLite Database                │
@@ -111,14 +111,14 @@ git push -u origin main
 - 牺牲部分食物保鲜保障医疗资源
 
 ### AI 决策执行
-GLM-4 建议"降低冷却" → 
+DeepSeek 建议"降低冷却" → 
 - 食物保鲜度 -2.5%
 - 能源 +3%
 - 日志显示："✓ 已降低非关键区域冷却精度"
 
 ## 比赛演示要点
 
-1. **真实 AI 驱动**：每次决策都调用云端 GLM-4-AIR
+1. **真实 AI 驱动**：每次决策都调用云端 DeepSeek Chat
 2. **双向联动**：AI 建议 → 解析关键词 → 执行数值变化 → UI 反馈
 3. **多层应急**：本地规则 + 云端 AI + 紧急协议三重保障
 4. **航天级 UI**：NASA 控制中心风格 + 动态粒子背景
