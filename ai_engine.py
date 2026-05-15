@@ -3,7 +3,7 @@ import datetime
 import json
 import os
 import sys
-from zhipuai import ZhipuAI
+from openai import OpenAI
 
 # 添加父目录到路径以导入config
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -11,13 +11,16 @@ parent_dir = os.path.dirname(current_dir)
 if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
 
-from config import ZHIPU_API_KEY
+from config import DEEPSEEK_API_KEY
 
 # 延迟初始化client，避免API KEY为空时失败
 client = None
-if ZHIPU_API_KEY:
+if DEEPSEEK_API_KEY:
     try:
-        client = ZhipuAI(api_key=ZHIPU_API_KEY)
+        client = OpenAI(
+            api_key=DEEPSEEK_API_KEY,
+            base_url="https://api.deepseek.com/v1"
+        )
     except Exception as e:
         print(f"AI client initialization failed: {e}")
         client = None
@@ -335,7 +338,7 @@ class AISurvivalEngine:
 控制在150字以内。
 """
             response = client.chat.completions.create(
-                model="glm-4-air",
+                model="deepseek-chat",
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.7
             )
@@ -409,7 +412,7 @@ class AISurvivalEngine:
 控制在80字以内。
 """
             response = client.chat.completions.create(
-                model="glm-4-air",
+                model="deepseek-chat",
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.7
             )
