@@ -180,6 +180,14 @@ def add_medical():
     result = ai_engine.add_medical_item(data)
     return jsonify(result)
 
+@app.route('/api/medical/remove/<int:item_id>', methods=['POST'])
+def remove_medical(item_id):
+    """移除医疗物品"""
+    data = request.get_json() or {}
+    reason = data.get('reason', '手动移除')
+    result = ai_engine.remove_medical_item(item_id, reason)
+    return jsonify(result)
+
 @app.route('/api/medical/temp-range', methods=['POST'])
 def update_medical_temp():
     """更新医疗温度范围"""

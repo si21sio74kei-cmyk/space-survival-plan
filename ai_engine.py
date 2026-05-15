@@ -451,11 +451,73 @@ class AISurvivalEngine:
         water_consumption = random.uniform(0.05, 0.2)
         protein_consumption = random.uniform(0.05, 0.15)
         
+        # 根据乘员配置调整消耗率
+        crew_members = state.get('crew_members', [])
+        crew_count = len(crew_members)
+        
+        if crew_count > 0:
+            # 计算平均热量需求
+            total_calorie_needs = sum(member.get('calorie_needs', 2500) for member in crew_members)
+            avg_calorie_needs = total_calorie_needs / crew_count
+            
+            # 根据热量需求调整消耗率（基准2500卡）
+            consumption_multiplier = avg_calorie_needs / 2500.0
+            
+            # 考虑特殊健康状况
+            health_factors = []
+            for member in crew_members:
+                health = member.get('health_status', 'good')
+                if health == 'poor':
+                    health_factors.append(1.2)  # 健康状况差，消耗增加20%
+                elif health == 'excellent':
+                    health_factors.append(0.9)  # 健康状况好，消耗减少10%
+                else:
+                    health_factors.append(1.0)
+            
+            avg_health_factor = sum(health_factors) / len(health_factors)
+            consumption_multiplier *= avg_health_factor
+        else:
+            consumption_multiplier = 1.0
+        
+        # 应用乘数
+        food_decay = food_decay * consumption_multiplier
+        water_consumption = water_consumption * consumption_multiplier
+        protein_consumption = protein_consumption * consumption_multiplier
+        
+        # 根据能源分配比例调整衰减率
+        distribution = state.get('energy_distribution', {})
+        medical_alloc = distribution.get('medical', 30)
+        food_alloc = distribution.get('food', 25)
+        env_alloc = distribution.get('environment', 25)
+        
+        # 分配越低，衰减越快（基准75%）
+        alloc_factor = (medical_alloc + food_alloc + env_alloc) / 80.0
+        if alloc_factor > 0:
+            energy_decay = energy_decay / alloc_factor
+        
         status['energy_level'] = max(0, status['energy_level'] - energy_decay)
         status['food_stability'] = max(0, status['food_stability'] - food_decay)
         status['water_reserve'] = max(0, status['water_reserve'] - water_consumption)
         status['protein_level'] = max(0, status['protein_level'] - protein_consumption)
-        status['humidity'] = max(30, min(60, status['humidity'] + random.uniform(-1, 1)))
+        
+        # 环境参数向目标值靠拢
+        env_targets = state.get('env_targets', {})
+        target_temp = env_targets.get('temperature', 22.0)
+        target_humidity = env_targets.get('humidity', 45.0)
+        target_oxygen = env_targets.get('oxygen', 21.0)
+        
+        # 温度向目标值缓慢靠近（每次调整0.1度）
+        temp_diff = target_temp - status.get('temperature', 22.0)
+        status['temperature'] = (status.get('temperature', 22.0) or 22.0) + temp_diff * 0.1 + random.uniform(-0.5, 0.5)
+        
+        # 湿度向目标值靠近
+        humidity_diff = target_humidity - status['humidity']
+        status['humidity'] = max(30, min(60, status['humidity'] + humidity_diff * 0.1 + random.uniform(-1, 1)))
+        
+        # 氧气向目标值靠近
+        oxygen_diff = target_oxygen - status['oxygen_level']
+        status['oxygen_level'] = max(0, min(100, status['oxygen_level'] + oxygen_diff * 0.05 + random.uniform(-0.5, 0.5)))
+        
         status['pressure'] = max(95, min(105, status['pressure'] + random.uniform(-0.1, 0.1)))
         status['backup_power_hours'] = max(0, status['backup_power_hours'] - 0.01)
         status['mission_day'] += 1
@@ -662,9 +724,10 @@ class AISurvivalEngine:
         
         state['food_inventory'].append(new_item)
         
-        # 更新食物稳定性（基于库存总量）
-        total_quantity = sum(item['quantity'] for item in state['food_inventory'])
-        state['food_stability'] = min(100, total_quantity / 10.0)  # 每10单位=1%稳定性
+        # 更新食物稳定性（增量更新，避免覆盖原有衰减）
+        added_quantity = new_item['quantity']
+        stability_increase = added_quantity / 10.0  # 每10单位=1%稳定性
+        state['food_stability'] = min(100, state['food_stability'] + stability_increase)
         
         log_entry = {
             'timestamp': datetime.datetime.utcnow().isoformat(),
@@ -690,11 +753,16 @@ class AISurvivalEngine:
         
         if removed:
             state['food_inventory'] = remaining
+            
+            # 重新计算食物稳定性（基于剩余库存）
+            total_quantity = sum(item['quantity'] for item in remaining)
+            state['food_stability'] = min(100, total_quantity / 10.0)
+            
             log_entry = {
                 'timestamp': datetime.datetime.utcnow().isoformat(),
                 'log_type': 'WARNING',
                 'message': f'移除食物: {removed["name"]} (原因: {reason})',
-                'ai_decision': 'AI已记录食物消耗'
+                'ai_decision': 'AI已记录食物消耗并更新稳定性'
             }
             logs.insert(0, log_entry)
             return {'success': True, 'removed': removed}
@@ -743,9 +811,10 @@ class AISurvivalEngine:
         
         state['medical_items'].append(new_item)
         
-        # 更新医疗安全性（基于库存总量）
-        total_quantity = sum(item['quantity'] for item in state['medical_items'])
-        state['medical_safety'] = min(100, total_quantity / 5.0)  # 每5单位=1%安全性
+        # 更新医疗安全性（增量更新，避免覆盖原有衰减）
+        added_quantity = new_item['quantity']
+        safety_increase = added_quantity / 5.0  # 每5单位=1%安全性
+        state['medical_safety'] = min(100, state['medical_safety'] + safety_increase)
         
         log_entry = {
             'timestamp': datetime.datetime.utcnow().isoformat(),
@@ -756,6 +825,36 @@ class AISurvivalEngine:
         logs.insert(0, log_entry)
         
         return {'success': True, 'item': new_item, 'updated_status': self.get_current_status()}
+    
+    def remove_medical_item(self, item_id, reason=''):
+        """移除医疗物品"""
+        state, logs = get_persistent_state()
+        
+        removed = None
+        remaining = []
+        for item in state['medical_items']:
+            if item['id'] == item_id:
+                removed = item
+            else:
+                remaining.append(item)
+        
+        if removed:
+            state['medical_items'] = remaining
+            
+            # 重新计算医疗安全性（基于剩余库存）
+            total_quantity = sum(item['quantity'] for item in remaining)
+            state['medical_safety'] = min(100, total_quantity / 5.0)
+            
+            log_entry = {
+                'timestamp': datetime.datetime.utcnow().isoformat(),
+                'log_type': 'WARNING',
+                'message': f'移除医疗物品: {removed["name"]} (原因: {reason})',
+                'ai_decision': 'AI已更新医疗库存'
+            }
+            logs.insert(0, log_entry)
+            return {'success': True, 'removed': removed}
+        
+        return {'success': False, 'error': '物品不存在'}
     
     def update_medical_temp_range(self, min_temp, max_temp):
         """更新医疗温度范围"""
@@ -782,15 +881,9 @@ class AISurvivalEngine:
         
         state['energy_distribution'] = distribution
         
-        # 根据能源分配重新计算能源水平
-        medical_alloc = distribution.get('medical', 25)
-        food_alloc = distribution.get('food', 25)
-        env_alloc = distribution.get('environment', 30)
-        other_alloc = distribution.get('other', 20)
-        
-        # 能源分配影响各系统效率
-        efficiency_factor = (medical_alloc + food_alloc + env_alloc) / 80.0
-        state['energy_level'] = min(100, state['energy_level'] * efficiency_factor)
+        # 不再直接修改energy_level，避免累积效应
+        # energy_level的衰减由simulate_step()统一处理
+        # 这里只记录分配比例，供simulate_step参考
         
         log_entry = {
             'timestamp': datetime.datetime.utcnow().isoformat(),
@@ -968,7 +1061,30 @@ class AISurvivalEngine:
         """更新任务参数"""
         state, logs = get_persistent_state()
         old_crew = state['crew_count']
-        state['crew_count'] = int(crew_count)
+        
+        # 如果乘员数量变化，同步更新crew_members列表
+        new_count = int(crew_count)
+        current_count = len(state['crew_members'])
+        
+        if new_count > current_count:
+            # 添加默认宇航员
+            for i in range(current_count, new_count):
+                state['crew_members'].append({
+                    'id': i + 1,
+                    'name': f'宇航员{chr(65 + i)}',
+                    'weight': 70,
+                    'age': 35,
+                    'health_status': 'good',
+                    'special_needs': [],
+                    'calorie_needs': 2500,
+                    'diet_requirements': [],
+                    'allergies': []
+                })
+        elif new_count < current_count:
+            # 移除多余宇航员
+            state['crew_members'] = state['crew_members'][:new_count]
+        
+        state['crew_count'] = len(state['crew_members'])  # 始终与crew_members同步
         state['task_duration'] = int(duration)
         state['activity_level'] = activity_level
         state['resupply_interval'] = int(resupply_interval)

@@ -481,7 +481,90 @@ async function loadMedicalModule() {
                 </button>
             </div>
         </div>
+        
+        <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px;">
+            <h3 style="color: var(--tech-cyan); margin-bottom: 15px;">
+                <i class="fas fa-list"></i> 医疗物品列表
+            </h3>
+            <div id="medical-items-list" style="max-height: 300px; overflow-y: auto;">
+                <p style="color: #aaa;">加载中...</p>
+            </div>
+        </div>
     `;
+    
+    // 加载医疗物品列表
+    await loadMedicalItemsList();
+}
+
+async function loadMedicalItemsList() {
+    try {
+        const response = await fetch('/api/medical');
+        const data = await response.json();
+        
+        const listContainer = document.getElementById('medical-items-list');
+        if (!listContainer) return;
+        
+        const items = data.medical_items || [];
+        
+        if (items.length === 0) {
+            listContainer.innerHTML = '<p style="color: #aaa;">暂无医疗物品</p>';
+            return;
+        }
+        
+        let html = '<div style="display: grid; gap: 10px;">';
+        items.forEach(item => {
+            html += `
+                <div style="background: rgba(0,243,255,0.1); padding: 15px; border-radius: 5px; border-left: 3px solid var(--tech-cyan);">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong style="color: #fff;">${item.name}</strong>
+                            <span style="color: #aaa; font-size: 12px; margin-left: 10px;">(${item.type})</span>
+                        </div>
+                        <button onclick="removeMedicalItem(${item.id})" style="padding: 5px 10px; background: #ff4d4d; color: #fff; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">
+                            <i class="fas fa-trash"></i> 删除
+                        </button>
+                    </div>
+                    <div style="color: #aaa; font-size: 12px; margin-top: 5px;">
+                        数量: ${item.quantity} | 存储温度: ${item.storage_temp}°C | 优先级: ${item.urgency}
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+        
+        listContainer.innerHTML = html;
+    } catch (error) {
+        console.error('Failed to load medical items:', error);
+        const listContainer = document.getElementById('medical-items-list');
+        if (listContainer) {
+            listContainer.innerHTML = '<p style="color: #ff4d4d;">加载失败</p>';
+        }
+    }
+}
+
+async function removeMedicalItem(itemId) {
+    const reason = prompt('请输入移除原因:', '过期');
+    if (!reason) return;
+    
+    try {
+        const response = await fetch(`/api/medical/remove/${itemId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reason })
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            showToast('✅ 医疗物品已移除');
+            await loadMedicalModule();
+            await refreshData(window.charts);
+        } else {
+            showToast('❌ 移除失败: ' + result.error);
+        }
+    } catch (error) {
+        console.error('Failed to remove medical item:', error);
+        showToast('❌ 网络错误');
+    }
 }
 
 async function addMedicalItem() {
@@ -2089,6 +2172,12 @@ async function refreshData(charts) {
             animateNumberWithSuffix(survivalTimeEl, survivalStatus.estimated_survival_days, ' DAYS');
         }
         
+        // 5.1 更新AI饮食建议
+        const dietAdviceEl = document.getElementById('diet-advice-display');
+        if (dietAdviceEl && survivalStatus.diet_advice) {
+            dietAdviceEl.textContent = survivalStatus.diet_advice;
+        }
+        
         // 6. 更新预测时间线（基于后端计算的结果）
         if (predictionChart && survivalStatus.predictions) {
             predictionChart.setOption({
@@ -2113,9 +2202,6 @@ async function refreshData(charts) {
         if (aiLogs && aiLogs.length > 0) {
             updateAILogs(aiLogs);
         }
-        
-        // 9. 保存状态到localStorage（用于页面刷新后恢复）
-        saveStateToLocalStorage(survivalStatus);
         
         console.log('=== 数据刷新完成 ===');
         
