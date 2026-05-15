@@ -173,6 +173,17 @@ def update_food_zones_api():
 
 # ==================== 医疗冷链管理 API ====================
 
+@app.route('/api/medical')
+def get_medical_items():
+    """获取医疗物品列表"""
+    status = ai_engine.get_current_status()
+    return jsonify({
+        'medical_items': status.get('medical_items', []),
+        'medical_safety': status.get('medical_safety', 100),
+        'medical_temp_range': status.get('medical_temp_range', {'min': -80, 'max': -60}),
+        'medical_priority_level': status.get('medical_priority_level', 'high')
+    })
+
 @app.route('/api/medical/add', methods=['POST'])
 def add_medical():
     """添加医疗物品"""
