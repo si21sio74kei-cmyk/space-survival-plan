@@ -21,14 +21,8 @@ app = Flask(__name__,
             static_url_path='')
 
 # Vercel Serverless架构：每次请求时自动执行模拟
-@app.before_request
-def auto_simulate():
-    """只在访问首页时执行模拟，避免API请求频繁触发"""
-    if request.path == '/' or request.path == '/index.html':
-        try:
-            ai_engine.simulate_step()
-        except Exception as e:
-            print(f"Auto-simulate error: {e}")
+# ★★★ 已移除 @app.before_request 自动模拟，避免每次访问页面都调用AI消耗Token ★★★
+# 现在只保留前端定时调用（每分钟1次）
 
 # ==================== 页面路由 ====================
 

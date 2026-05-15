@@ -45,7 +45,7 @@ async function init() {
     // 4. 设置滑块输入监听
     setupSliderInputs();
     
-    // 5. 启动自动刷新（每3秒）
+    // 5. 启动自动刷新（每10秒，降低频率以减少API调用）
     startAutoRefresh(charts);
     
     // 6. 启动模拟定时器（每分钟+1天）
@@ -1849,8 +1849,8 @@ function resetToDefault() {
     showToast('🔄 已重置为默认值');
 }
 function startAutoRefresh(charts) {
-    refreshInterval = setInterval(() => refreshData(charts), 3000);
-    console.log('Auto-refresh started (interval: 3s)');
+    refreshInterval = setInterval(() => refreshData(charts), 10000);
+    console.log('Auto-refresh started (interval: 10s)');
 }
 
 // 停止自动刷新
