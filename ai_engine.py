@@ -230,22 +230,14 @@ class AISurvivalEngine:
         
         status['estimated_survival_days'] = max(0, round(min(food_days, energy_days, oxygen_days, water_days), 1))
         
-        # 智能生成预测时间线（基于真实衰减率推演）
-        daily_decay = {
-            'food': 2.0 * crew_count / 4.0,
-            'energy': 1.0,
-            'oxygen': 0.5,
-            'water': 1.5 * crew_count / 4.0,
-            'medical': 0.3
-        }
-        
+        # 智能生成预测时间线（使用动态衰减率，与上面的计算保持一致）
         predictions = []
         for day in [30, 60, 90, 120]:
-            food_future = max(0, status['food_stability'] - daily_decay['food'] * day)
-            energy_future = max(0, status['energy_level'] - daily_decay['energy'] * day)
-            oxygen_future = max(0, status['oxygen_level'] - daily_decay['oxygen'] * day)
-            water_future = max(0, status['water_reserve'] - daily_decay['water'] * day)
-            medical_future = max(0, status['medical_safety'] - daily_decay['medical'] * day)
+            food_future = max(0, status['food_stability'] - food_decay_rate * day)
+            energy_future = max(0, status['energy_level'] - energy_decay_rate * day)
+            oxygen_future = max(0, status['oxygen_level'] - oxygen_decay_rate * day)
+            water_future = max(0, status['water_reserve'] - water_consumption_rate * day)
+            medical_future = max(0, status['medical_safety'] - 0.3 * day)
             
             predicted_index = (
                 food_future * 0.2 +
@@ -630,30 +622,57 @@ class AISurvivalEngine:
             status['water_reserve'] * 0.1
         )
         
-        # 智能计算预计生存天数
-        crew_count = max(1, status['crew_count'])
-        food_days = status['food_stability'] / (2.0 * crew_count / 4.0)
-        energy_days = status['energy_level'] / 1.0
-        oxygen_days = status['oxygen_level'] / 0.5
-        water_days = status['water_reserve'] / (1.5 * crew_count / 4.0)
+        # 智能计算预计生存天数（基于动态衰减率）
+        crew_members = state.get('crew_members', [])
+        crew_count = len(crew_members) if crew_members else status['crew_count']
+        
+        # 计算乘员消耗乘数
+        if crew_count > 0 and crew_members:
+            total_calorie_needs = sum(member.get('calorie_needs', 2500) for member in crew_members)
+            avg_calorie_needs = total_calorie_needs / crew_count
+            consumption_multiplier = avg_calorie_needs / 2500.0
+            
+            health_factors = []
+            for member in crew_members:
+                health = member.get('health_status', 'good')
+                if health == 'poor':
+                    health_factors.append(1.2)
+                elif health == 'excellent':
+                    health_factors.append(0.9)
+                else:
+                    health_factors.append(1.0)
+            avg_health_factor = sum(health_factors) / len(health_factors)
+            consumption_multiplier *= avg_health_factor
+        else:
+            consumption_multiplier = 1.0
+        
+        # 计算动态衰减率
+        food_decay_rate = 2.0 * consumption_multiplier
+        water_consumption_rate = 1.5 * consumption_multiplier
+        
+        # 根据能源分配比例调整
+        distribution = state.get('energy_distribution', {})
+        medical_alloc = distribution.get('medical', 30)
+        food_alloc = distribution.get('food', 25)
+        env_alloc = distribution.get('environment', 25)
+        alloc_factor = (medical_alloc + food_alloc + env_alloc) / 80.0
+        energy_decay_rate = 1.0 / alloc_factor if alloc_factor > 0 else 1.0
+        
+        # 计算预计生存天数
+        food_days = status['food_stability'] / food_decay_rate if food_decay_rate > 0 else 999
+        energy_days = status['energy_level'] / energy_decay_rate if energy_decay_rate > 0 else 999
+        oxygen_days = status['oxygen_level'] / 0.5  # 氧气衰减固定
+        water_days = status['water_reserve'] / water_consumption_rate if water_consumption_rate > 0 else 999
         estimated_survival_days = max(0, round(min(food_days, energy_days, oxygen_days, water_days), 1))
         
-        # 智能生成预测时间线
-        daily_decay = {
-            'food': 2.0 * crew_count / 4.0,
-            'energy': 1.0,
-            'oxygen': 0.5,
-            'water': 1.5 * crew_count / 4.0,
-            'medical': 0.3
-        }
-        
+        # 智能生成预测时间线（使用动态衰减率）
         predictions = []
         for day in [30, 60, 90, 120]:
-            food_future = max(0, status['food_stability'] - daily_decay['food'] * day)
-            energy_future = max(0, status['energy_level'] - daily_decay['energy'] * day)
-            oxygen_future = max(0, status['oxygen_level'] - daily_decay['oxygen'] * day)
-            water_future = max(0, status['water_reserve'] - daily_decay['water'] * day)
-            medical_future = max(0, status['medical_safety'] - daily_decay['medical'] * day)
+            food_future = max(0, status['food_stability'] - food_decay_rate * day)
+            energy_future = max(0, status['energy_level'] - energy_decay_rate * day)
+            oxygen_future = max(0, status['oxygen_level'] - 0.5 * day)
+            water_future = max(0, status['water_reserve'] - water_consumption_rate * day)
+            medical_future = max(0, status['medical_safety'] - 0.3 * day)
             
             predicted_index = (
                 food_future * 0.2 +
@@ -1324,8 +1343,30 @@ class AISurvivalEngine:
         
         # 乘员数量影响资源消耗率，重新计算预计生存天数
         crew_count = state['crew_count']
-        food_consumption_rate = 2.0 * crew_count / 4.0
-        water_consumption_rate = 1.5 * crew_count / 4.0
+        
+        # 计算动态消耗率（考虑所有乘员）
+        crew_members = state['crew_members']
+        if crew_count > 0:
+            total_calorie_needs = sum(member.get('calorie_needs', 2500) for member in crew_members)
+            avg_calorie_needs = total_calorie_needs / crew_count
+            consumption_multiplier = avg_calorie_needs / 2500.0
+            
+            health_factors = []
+            for member in crew_members:
+                health = member.get('health_status', 'good')
+                if health == 'poor':
+                    health_factors.append(1.2)
+                elif health == 'excellent':
+                    health_factors.append(0.9)
+                else:
+                    health_factors.append(1.0)
+            avg_health_factor = sum(health_factors) / len(health_factors)
+            consumption_multiplier *= avg_health_factor
+        else:
+            consumption_multiplier = 1.0
+        
+        food_consumption_rate = 2.0 * consumption_multiplier
+        water_consumption_rate = 1.5 * consumption_multiplier
         
         log_entry = {
             'timestamp': datetime.datetime.utcnow().isoformat(),
