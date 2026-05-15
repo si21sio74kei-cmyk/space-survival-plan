@@ -704,6 +704,15 @@ class AISurvivalEngine:
         if ai_action_taken:
             event_log.extend([f"✓ {action}" for action in ai_action_taken])
         
+        # ★★★ 关键修复：将修改后的 status 写回持久化 state ★★★
+        # 只有写回 state，下次 simulate_step() 才能基于最新状态计算
+        for key in ['mission_day', 'survival_index', 'energy_level', 'food_stability',
+                     'medical_safety', 'oxygen_level', 'radiation_level', 'protein_level',
+                     'water_reserve', 'humidity', 'pressure', 'backup_power_hours',
+                     'crew_count', 'temperature']:
+            if key in status:
+                state[key] = status[key]
+        
         return {
             "mission_day": status['mission_day'],
             "survival_index": status['survival_index'],
