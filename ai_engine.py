@@ -885,11 +885,16 @@ class AISurvivalEngine:
         # energy_level的衰减由simulate_step()统一处理
         # 这里只记录分配比例，供simulate_step参考
         
+        medical_alloc = distribution.get('medical', 30)
+        food_alloc = distribution.get('food', 25)
+        env_alloc = distribution.get('environment', 25)
+        other_alloc = distribution.get('other', 20)
+        
         log_entry = {
             'timestamp': datetime.datetime.utcnow().isoformat(),
             'log_type': 'INFO',
             'message': f'更新能源分配: 医疗{medical_alloc}%, 食物{food_alloc}%, 环境{env_alloc}%, 其他{other_alloc}%',
-            'ai_decision': 'AI已根据新的能源分配重新计算系统状态和预测'
+            'ai_decision': 'AI已记录新的能源分配策略'
         }
         logs.insert(0, log_entry)
         
