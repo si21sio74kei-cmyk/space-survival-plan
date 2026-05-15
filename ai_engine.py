@@ -177,12 +177,57 @@ class AISurvivalEngine:
         status['base_stability'] = (status['energy_level'] + status['food_stability'] + status['medical_safety']) / 3
         status['environment_score'] = (status['oxygen_level'] + status['humidity'] * 2 + status['pressure']) / 3
         
-        # 智能计算预计生存天数（基于资源衰减率）
-        crew_count = max(1, status['crew_count'])
-        food_days = status['food_stability'] / (2.0 * crew_count / 4.0)
-        energy_days = status['energy_level'] / 1.0
-        oxygen_days = status['oxygen_level'] / 0.5
-        water_days = status['water_reserve'] / (1.5 * crew_count / 4.0)
+        # 智能计算预计生存天数（基于动态衰减率，与simulate_step保持一致）
+        crew_members = state.get('crew_members', [])
+        crew_count = len(crew_members) if crew_members else status['crew_count']
+        
+        # 计算乘员消耗乘数（与simulate_step()保持一致）
+        if crew_count > 0 and crew_members:
+            total_calorie_needs = sum(member.get('calorie_needs', 2500) for member in crew_members)
+            avg_calorie_needs = total_calorie_needs / crew_count
+            consumption_multiplier = avg_calorie_needs / 2500.0
+            
+            health_factors = []
+            for member in crew_members:
+                health = member.get('health_status', 'good')
+                if health == 'poor':
+                    health_factors.append(1.2)
+                elif health == 'excellent':
+                    health_factors.append(0.9)
+                else:
+                    health_factors.append(1.0)
+            avg_health_factor = sum(health_factors) / len(health_factors)
+            consumption_multiplier *= avg_health_factor
+        else:
+            consumption_multiplier = 1.0
+        
+        # 基础衰减率
+        base_food_decay = 2.0
+        base_water_consumption = 1.5
+        base_energy_decay = 1.0
+        base_oxygen_decay = 0.5
+        
+        # 应用乘员消耗乘数
+        food_decay_rate = base_food_decay * consumption_multiplier
+        water_consumption_rate = base_water_consumption * consumption_multiplier
+        energy_decay_rate = base_energy_decay  # 能源衰减不受乘员影响
+        oxygen_decay_rate = base_oxygen_decay  # 氧气衰减不受乘员影响
+        
+        # 根据能源分配比例调整（与simulate_step()保持一致）
+        distribution = state.get('energy_distribution', {})
+        medical_alloc = distribution.get('medical', 30)
+        food_alloc = distribution.get('food', 25)
+        env_alloc = distribution.get('environment', 25)
+        alloc_factor = (medical_alloc + food_alloc + env_alloc) / 80.0
+        if alloc_factor > 0:
+            energy_decay_rate = energy_decay_rate / alloc_factor
+        
+        # 计算预计生存天数（资源量 / 衰减率）
+        food_days = status['food_stability'] / food_decay_rate if food_decay_rate > 0 else 999
+        energy_days = status['energy_level'] / energy_decay_rate if energy_decay_rate > 0 else 999
+        oxygen_days = status['oxygen_level'] / oxygen_decay_rate if oxygen_decay_rate > 0 else 999
+        water_days = status['water_reserve'] / water_consumption_rate if water_consumption_rate > 0 else 999
+        
         status['estimated_survival_days'] = max(0, round(min(food_days, energy_days, oxygen_days, water_days), 1))
         
         # 智能生成预测时间线（基于真实衰减率推演）
