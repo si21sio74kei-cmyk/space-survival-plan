@@ -23,13 +23,15 @@ app = Flask(__name__,
 # Vercel Serverless架构：每次请求时自动执行模拟
 @app.before_request
 def auto_simulate():
-    """Vercel兼容：仅在特定路径执行模拟（避免每次请求都卡顿）"""
-    # 只在访问首页时执行一次模拟，而不是每次API请求
-    if request.path == '/' or request.path == '/index.html':
-        try:
-            ai_engine.simulate_step()
-        except Exception as e:
-            print(f"Auto-simulate error: {e}")
+    """Vercel兼容：每次API请求都执行模拟，确保数据动态变化"""
+    # 跳过静态文件请求
+    if request.path.startswith('/static/') or request.path.endswith('.css') or request.path.endswith('.js'):
+        return
+    
+    try:
+        ai_engine.simulate_step()
+    except Exception as e:
+        print(f"Auto-simulate error: {e}")
 
 # ==================== 页面路由 ====================
 

@@ -553,6 +553,10 @@ async function loadEnergyModule() {
                     <input type="range" id="energy-other" min="0" max="100" value="20" oninput="updateEnergyDist()" style="width: 100%; accent-color: var(--tech-cyan);">
                     <span id="val-energy-other" style="color: var(--tech-cyan);">20%</span>
                 </div>
+                <div style="padding: 10px; background: rgba(0,0,0,0.3); border-radius: 5px; text-align: center;">
+                    <label style="color: #fff; font-size: 14px;">当前总和：</label>
+                    <span id="val-energy-total" style="color: var(--tech-cyan); font-size: 18px; font-weight: bold;">100%</span>
+                </div>
                 <button onclick="applyEnergyDistribution()" style="padding: 10px 20px; background: var(--tech-cyan); color: #000; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 10px;">
                     <i class="fas fa-check"></i> 应用分配
                 </button>
@@ -617,13 +621,22 @@ async function loadEnergyModule() {
 }
 
 function updateEnergyDist() {
+    let total = 0;
     ['medical', 'food', 'env', 'other'].forEach(id => {
         const slider = document.getElementById(`energy-${id}`);
         const display = document.getElementById(`val-energy-${id}`);
         if (slider && display) {
             display.textContent = slider.value + '%';
+            total += parseInt(slider.value);
         }
     });
+    
+    // 更新总和显示
+    const totalDisplay = document.getElementById('val-energy-total');
+    if (totalDisplay) {
+        totalDisplay.textContent = total + '%';
+        totalDisplay.style.color = total === 100 ? 'var(--tech-cyan)' : '#ff4d4d';
+    }
 }
 
 async function applyEnergyDistribution() {
