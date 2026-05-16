@@ -295,6 +295,12 @@ class AISurvivalEngine:
             'backup_hours': round(state['backup_power_hours'], 1),
             'backup_power_hours': round(state['backup_power_hours'], 1),  # 前端所需字段
             'consumption_rate': 0.5,
+            'energy_distribution': state.get('energy_distribution', {  # 前端图表所需字段
+                'medical': 30,
+                'food': 25,
+                'environment': 25,
+                'other': 20
+            }),
             'sources': [
                 {'name': '主反应堆', 'value': round(state['energy_level'] * 0.7, 1)},
                 {'name': '太阳能板', 'value': round(state['energy_level'] * 0.2, 1)},

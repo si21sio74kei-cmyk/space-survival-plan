@@ -126,6 +126,12 @@ const updateDashboardView = (data) => {
 
 const updateFoodView = (data) => {
     document.getElementById('module-title').innerText = "食物资源系统 FOOD RESOURCES";
+    
+    // 从categories中提取动态数据，如果没有则使用计算值
+    const categories = data.categories || [];
+    const frozenFood = categories.find(c => c.name === '冷冻食品')?.value || (data.food_stability * 0.6);
+    const dehydratedFood = categories.find(c => c.name === '脱水食品')?.value || (data.food_stability * 0.4);
+    
     const option = {
         title: { text: '分类库存与营养分析', textStyle: { color: '#fff' } },
         tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
@@ -134,9 +140,9 @@ const updateFoodView = (data) => {
         series: [{
             data: [
                 { value: data.food_stability || 70, itemStyle: { color: '#00f3ff' } },
-                { value: 85, itemStyle: { color: '#0066ff' } },
+                { value: dehydratedFood || 85, itemStyle: { color: '#0066ff' } },
                 { value: data.protein_level || 60, itemStyle: { color: '#ff9f43' } },
-                { value: 95, itemStyle: { color: '#ff4d4d' } },
+                { value: frozenFood || 95, itemStyle: { color: '#ff4d4d' } },
                 { value: data.water_reserve || 80, itemStyle: { color: '#00ccff' } }
             ],
             type: 'bar',
@@ -153,7 +159,12 @@ const updateMedicalView = (data) => {
         xAxis: { type: 'category', data: ['疫苗', '血浆', '生物样本', '急救药'], axisLabel: { color: '#fff' } },
         yAxis: { type: 'value', name: '温度 (°C)', axisLabel: { color: '#fff' }, splitLine: { lineStyle: { color: '#333' } } },
         series: [{
-            data: [-70, -40, -196, 4],
+            data: [
+                data.temperature || -70,
+                (data.temperature || -70) + 5,
+                -196,
+                4
+            ],
             type: 'bar',
             itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: '#00f3ff' }, { offset: 1, color: '#0066ff' }]) }
         }]
@@ -163,6 +174,15 @@ const updateMedicalView = (data) => {
 
 const updateEnergyView = (data) => {
     document.getElementById('module-title').innerText = "能源与环境系统 ENERGY & ENV";
+    
+    // 使用动态的能源分配数据
+    const distribution = data.energy_distribution || {
+        medical: 30,
+        food: 25,
+        environment: 25,
+        other: 20
+    };
+    
     const option = {
         title: { text: `备用能源剩余: ${data.backup_power_hours}h | 宇航员食谱: ${data.diet_advice}`, textStyle: { color: '#fff', fontSize: 12 } },
         legend: { top: 'bottom', textStyle: { color: '#fff' } },
@@ -170,10 +190,10 @@ const updateEnergyView = (data) => {
             type: 'pie',
             radius: ['40%', '70%'],
             data: [
-                { value: 40, name: '冷链系统' },
-                { value: 30, name: '生命维持' },
-                { value: 20, name: 'AI 核心' },
-                { value: 10, name: '通讯导航' }
+                { value: distribution.medical || 30, name: '医疗冷链' },
+                { value: distribution.food || 25, name: '食物系统' },
+                { value: distribution.environment || 25, name: '环境控制' },
+                { value: distribution.other || 20, name: '其他系统' }
             ],
             label: { color: '#fff' }
         }]
@@ -190,7 +210,7 @@ const updateEnvView = (data) => {
         series: [{
             data: [
                 data.oxygen_level,
-                0.04,
+                data.co2 || 0.04,
                 data.humidity,
                 data.pressure,
                 data.radiation_level

@@ -364,12 +364,12 @@ def simulate_emergency_scenario():
 def manual_simulate_step():
     """手动触发模拟步骤（用于前端定时调用）"""
     try:
-        ai_engine.simulate_step()
-        state, logs = ai_engine.get_state_and_logs()
+        result = ai_engine.simulate_step()
+        # simulate_step() 返回的就是最新状态
         return jsonify({
             'success': True,
-            'state': state,
-            'message': f'Day {state["mission_day"]} simulation completed'
+            'state': result,
+            'message': f'Day {result["mission_day"]} simulation completed'
         })
     except Exception as e:
         return jsonify({

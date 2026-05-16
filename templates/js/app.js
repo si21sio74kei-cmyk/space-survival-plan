@@ -311,8 +311,12 @@ async function addFoodItem() {
             document.getElementById('food-expiry').value = '';
             // 重新加载模块并刷新数据
             await loadFoodModule();
-            // 刷新总控制台数据以更新生存指数和预测
+            // 强制刷新总控制台数据以更新生存指数、预测图表和顶部状态栏
             await refreshData(window.charts);
+            // 确保仪表盘视图也被更新
+            if (window.charts && window.charts.mainChart) {
+                updateDashboardView(result.updated_status);
+            }
         } else {
             showToast('❌ 添加失败: ' + (result.error || '未知错误'));
         }
@@ -1399,8 +1403,12 @@ async function addCrewMember() {
             document.getElementById('crew-health').value = 'good';
             // 重新加载模块并刷新数据
             await loadCrewModule();
-            // 刷新总控制台数据以更新生存指数和预测
+            // 强制刷新总控制台数据以更新生存指数、预测图表和顶部状态栏
             await refreshData(window.charts);
+            // 确保仪表盘视图也被更新
+            if (window.charts && window.charts.mainChart) {
+                updateDashboardView(result.updated_status);
+            }
         } else {
             showToast('❌ 添加失败: ' + (result.error || '未知错误'));
         }
@@ -2149,10 +2157,27 @@ async function refreshData(charts) {
             exitEmergencyAnimation();
         }
         
-        // 2. 更新仪表盘数据（总控制台雷达图）
+        // 2. 更新顶部状态栏 - 始终更新（无论当前在哪个视图）
+        document.getElementById('crew-display').innerText = survivalStatus.crew_count;
+        document.getElementById('stability-display').innerText = Math.round(survivalStatus.survival_index) + '%';
+        document.getElementById('day-display').innerText = String(survivalStatus.mission_day).padStart(3, '0');
+        
+        // 3. 更新预计生存时间（带动画）- 始终更新
+        const survivalTimeEl = document.getElementById('est-survival-days');
+        if (survivalTimeEl && survivalStatus.estimated_survival_days) {
+            animateNumberWithSuffix(survivalTimeEl, survivalStatus.estimated_survival_days, ' DAYS');
+        }
+        
+        // 4. 更新AI饮食建议 - 始终更新
+        const dietAdviceEl = document.getElementById('diet-advice-display');
+        if (dietAdviceEl && survivalStatus.diet_advice) {
+            dietAdviceEl.textContent = survivalStatus.diet_advice;
+        }
+        
+        // 5. 更新仪表盘数据（总控制台雷达图）- 始终更新以保持同步
         updateDashboardView(survivalStatus);
         
-        // 3. 更新生存指数仪表盘
+        // 6. 更新生存指数仪表盘
         if (gaugeChart) {
             gaugeChart.setOption({
                 series: [{
@@ -2161,24 +2186,7 @@ async function refreshData(charts) {
             });
         }
         
-        // 4. 更新顶部状态栏
-        document.getElementById('crew-display').innerText = survivalStatus.crew_count;
-        document.getElementById('stability-display').innerText = Math.round(survivalStatus.survival_index) + '%';
-        document.getElementById('day-display').innerText = String(survivalStatus.mission_day).padStart(3, '0');
-        
-        // 5. 更新预计生存时间（带动画）
-        const survivalTimeEl = document.getElementById('est-survival-days');
-        if (survivalTimeEl && survivalStatus.estimated_survival_days) {
-            animateNumberWithSuffix(survivalTimeEl, survivalStatus.estimated_survival_days, ' DAYS');
-        }
-        
-        // 5.1 更新AI饮食建议
-        const dietAdviceEl = document.getElementById('diet-advice-display');
-        if (dietAdviceEl && survivalStatus.diet_advice) {
-            dietAdviceEl.textContent = survivalStatus.diet_advice;
-        }
-        
-        // 6. 更新预测时间线（基于后端计算的结果）
+        // 7. 更新预测时间线（基于后端计算的结果）- 始终更新
         if (predictionChart && survivalStatus.predictions) {
             predictionChart.setOption({
                 xAxis: { data: ['D+30', 'D+60', 'D+90', 'D+120'] },
@@ -2186,7 +2194,8 @@ async function refreshData(charts) {
             });
         }
         
-        // 7. 根据当前模块更新对应图表（传递完整数据）
+        // 8. 根据当前模块更新对应图表（传递完整数据）
+        // 注意：这会在主图表上显示特定模块的数据
         if (currentModule === 'food') {
             // 食物页面：合并生存状态和食物系统数据
             updateFoodView({...survivalStatus, ...foodSystem});
@@ -2198,7 +2207,7 @@ async function refreshData(charts) {
             updateEnvView({...survivalStatus, ...environment});
         }
         
-        // 8. 更新AI日志
+        // 9. 更新AI日志
         if (aiLogs && aiLogs.length > 0) {
             updateAILogs(aiLogs);
         }
