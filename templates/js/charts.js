@@ -102,6 +102,9 @@ const updateDashboardView = (data) => {
         data.water_reserve || 85
     ] : [80, 90, 70, 95, 85];
     
+    // 确保所有值都是有效数字
+    const cleanValues = values.map(v => typeof v === 'number' && !isNaN(v) ? v : 0);
+    
     const option = {
         radar: {
             indicator: [
@@ -116,7 +119,7 @@ const updateDashboardView = (data) => {
         },
         series: [{
             type: 'radar',
-            data: [{ value: values, name: '当前状态' }],
+            data: [{ value: cleanValues, name: '当前状态' }],
             itemStyle: { color: '#00f3ff' },
             areaStyle: { color: 'rgba(0, 243, 255, 0.3)' }
         }]
@@ -127,10 +130,14 @@ const updateDashboardView = (data) => {
 const updateFoodView = (data) => {
     document.getElementById('module-title').innerText = "食物资源系统 FOOD RESOURCES";
     
-    // 从categories中提取动态数据，如果没有则使用计算值
-    const categories = data.categories || [];
-    const frozenFood = categories.find(c => c.name === '冷冻食品')?.value || (data.food_stability * 0.6);
-    const dehydratedFood = categories.find(c => c.name === '脱水食品')?.value || (data.food_stability * 0.4);
+    // 确保数据有效性
+    const foodStability = data.food_stability || 70;
+    const proteinLevel = data.protein_level || 60;
+    const waterReserve = data.water_reserve || 80;
+    
+    // 计算冷冻和脱水食品比例
+    const frozenFood = foodStability * 0.6;
+    const dehydratedFood = foodStability * 0.4;
     
     const option = {
         title: { text: '分类库存与营养分析', textStyle: { color: '#fff' } },
@@ -139,11 +146,11 @@ const updateFoodView = (data) => {
         yAxis: { type: 'value', axisLabel: { color: '#fff' }, splitLine: { lineStyle: { color: '#333' } } },
         series: [{
             data: [
-                { value: data.food_stability || 70, itemStyle: { color: '#00f3ff' } },
-                { value: dehydratedFood || 85, itemStyle: { color: '#0066ff' } },
-                { value: data.protein_level || 60, itemStyle: { color: '#ff9f43' } },
-                { value: frozenFood || 95, itemStyle: { color: '#ff4d4d' } },
-                { value: data.water_reserve || 80, itemStyle: { color: '#00ccff' } }
+                { value: frozenFood, itemStyle: { color: '#00f3ff' } },
+                { value: dehydratedFood, itemStyle: { color: '#0066ff' } },
+                { value: proteinLevel, itemStyle: { color: '#ff9f43' } },
+                { value: foodStability, itemStyle: { color: '#ff4d4d' } },
+                { value: waterReserve, itemStyle: { color: '#00ccff' } }
             ],
             type: 'bar',
             label: { show: true, position: 'top', color: '#fff' }

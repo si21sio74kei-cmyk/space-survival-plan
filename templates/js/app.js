@@ -16,7 +16,12 @@ function saveStateToLocalStorage(state) {
 function loadStateFromLocalStorage() {
     try {
         const saved = localStorage.getItem('spaceSurvivalState');
-        return saved ? JSON.parse(saved) : null;
+        if (saved) {
+            const state = JSON.parse(saved);
+            console.log('Loaded state from localStorage:', state);
+            return state;
+        }
+        return null;
     } catch (e) {
         console.error('Failed to load state:', e);
         return null;
@@ -45,13 +50,35 @@ async function init() {
     // 4. 设置滑块输入监听
     setupSliderInputs();
     
-    // 5. 启动自动刷新（每10秒，降低频率以减少API调用）
+    // 5. 尝试从localStorage加载状态并应用到后端
+    const savedState = loadStateFromLocalStorage();
+    if (savedState && savedState.mission_day) {
+        // 如果有保存的状态,同步到后端
+        await fetch('/api/adjust-parameters', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                food_stability: savedState.food_stability || 95,
+                energy_level: savedState.energy_level || 92,
+                medical_safety: savedState.medical_safety || 98,
+                oxygen_level: savedState.oxygen_level || 99,
+                water_reserve: savedState.water_reserve || 100,
+                protein_level: savedState.protein_level || 100,
+                humidity: savedState.humidity || 45,
+                pressure: savedState.pressure || 101.3,
+                backup_power_hours: savedState.backup_power_hours || 48
+            })
+        });
+        console.log('Restored state from localStorage');
+    }
+    
+    // 6. 启动自动刷新（每10秒，降低频率以减少API调用）
     startAutoRefresh(charts);
     
-    // 6. 启动模拟定时器（每分钟+1天）
+    // 7. 启动模拟定时器（每5分钟+1天）
     startSimulation();
     
-    // 7. 立即执行一次数据刷新
+    // 8. 立即执行一次数据刷新
     await refreshData(charts);
     
     console.log('System initialized successfully.');
@@ -1872,7 +1899,7 @@ function stopAutoRefresh() {
 
 // ==================== 模拟控制 ====================
 function startSimulation() {
-    // 每分钟执行一次模拟（+1天）
+    // 每5分钟执行一次模拟（+1天）
     simulationTimer = setInterval(async () => {
         try {
             const response = await fetch('/api/simulate_step', { method: 'POST' });
@@ -2207,9 +2234,12 @@ async function refreshData(charts) {
             updateEnvView({...survivalStatus, ...environment});
         }
         
-        // 9. 更新AI日志
+        // 9. 更新AI日志（避免重复渲染）
         if (aiLogs && aiLogs.length > 0) {
-            updateAILogs(aiLogs);
+            const currentLogCount = document.getElementById('ai-logs').childElementCount;
+            if (currentLogCount === 0 || currentLogCount !== aiLogs.length) {
+                updateAILogs(aiLogs);
+            }
         }
         
         console.log('=== 数据刷新完成 ===');
