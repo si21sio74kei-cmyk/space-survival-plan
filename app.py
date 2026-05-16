@@ -9,6 +9,10 @@ from datetime import datetime
 from functools import wraps
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from dotenv import load_dotenv
+
+# 加载.env文件
+load_dotenv()
 
 # 添加当前目录到Python路径
 current_dir = os.path.dirname(os.path.abspath(__file__))

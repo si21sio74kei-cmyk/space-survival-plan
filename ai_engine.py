@@ -4,6 +4,10 @@ import json
 import os
 import sys
 from openai import OpenAI
+from dotenv import load_dotenv
+
+# 加载.env文件
+load_dotenv()
 
 # 添加父目录到路径以导入config
 current_dir = os.path.dirname(os.path.abspath(__file__))
