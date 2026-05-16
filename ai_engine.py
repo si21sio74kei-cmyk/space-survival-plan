@@ -46,6 +46,7 @@ def get_persistent_state():
             'medical_temp': -70.0,
             'humidity': 45.0,
             'pressure': 101.3,
+            'temperature': 22.0,  # 环境温度
             'backup_power_hours': 48.0,
             'crew_count': 4,
             'last_updated': datetime.datetime.utcnow().isoformat(),
@@ -731,6 +732,7 @@ class AISurvivalEngine:
             "water_reserve": status['water_reserve'],
             "humidity": status['humidity'],
             "pressure": status['pressure'],
+            "temperature": round(status.get('temperature', 22.0), 1),
             "backup_power_hours": round(status['backup_power_hours'], 1),
             "crew_count": status['crew_count'],
             "diet_advice": diet_advice,

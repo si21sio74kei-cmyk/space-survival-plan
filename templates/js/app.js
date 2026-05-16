@@ -7,9 +7,9 @@ let simulationTimer = null; // 模拟定时器
 function saveStateToLocalStorage(state) {
     try {
         localStorage.setItem('spaceSurvivalState', JSON.stringify(state));
-        console.log('State saved to localStorage');
+        Logger.log('State saved to localStorage');
     } catch (e) {
-        console.error('Failed to save state:', e);
+        Logger.error('Failed to save state:', e);
     }
 }
 
@@ -18,12 +18,12 @@ function loadStateFromLocalStorage() {
         const saved = localStorage.getItem('spaceSurvivalState');
         if (saved) {
             const state = JSON.parse(saved);
-            console.log('Loaded state from localStorage:', state);
+            Logger.log('Loaded state from localStorage:', state);
             return state;
         }
         return null;
     } catch (e) {
-        console.error('Failed to load state:', e);
+        Logger.error('Failed to load state:', e);
         return null;
     }
 }
@@ -34,7 +34,7 @@ function clearStateFromLocalStorage() {
 
 // 初始化系统
 async function init() {
-    console.log('Initializing DeepSpace AI Survival System...');
+    Logger.log('Initializing DeepSpace AI Survival System...');
     
     // 1. 初始化星空背景
     initStarfield();
@@ -69,7 +69,7 @@ async function init() {
                 backup_power_hours: savedState.backup_power_hours || 48
             })
         });
-        console.log('Restored state from localStorage');
+        Logger.log('Restored state from localStorage');
     }
     
     // 6. 启动自动刷新（每10秒，降低频率以减少API调用）
@@ -81,7 +81,7 @@ async function init() {
     // 8. 立即执行一次数据刷新
     await refreshData(charts);
     
-    console.log('System initialized successfully.');
+    Logger.log('System initialized successfully.');
 }
 
 // 设置导航栏交互

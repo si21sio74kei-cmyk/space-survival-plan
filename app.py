@@ -6,6 +6,9 @@ import sys
 import os
 from flask import Flask, render_template, jsonify, request
 from datetime import datetime
+from functools import wraps
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 # 添加当前目录到Python路径
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -19,6 +22,55 @@ app = Flask(__name__,
             template_folder='templates',
             static_folder='templates',
             static_url_path='')
+
+# ==================== 速率限制配置 ====================
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="memory://"
+)
+
+# ==================== 输入验证装饰器 ====================
+
+def validate_json(*required_fields):
+    """验证JSON请求是否包含必需字段"""
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            data = request.get_json()
+            if data is None:
+                return jsonify({'success': False, 'error': '请求必须包含JSON数据'}), 400
+            
+            missing = [field for field in required_fields if field not in data]
+            if missing:
+                return jsonify({'success': False, 'error': f'缺少必需字段: {", ".join(missing)}'}), 400
+            
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
+def validate_range(field_name, min_val=None, max_val=None):
+    """验证数值字段范围"""
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            data = request.get_json() or {}
+            value = data.get(field_name)
+            
+            if value is not None:
+                try:
+                    value = float(value)
+                    if min_val is not None and value < min_val:
+                        return jsonify({'success': False, 'error': f'{field_name}不能小于{min_val}'}), 400
+                    if max_val is not None and value > max_val:
+                        return jsonify({'success': False, 'error': f'{field_name}不能大于{max_val}'}), 400
+                except (ValueError, TypeError):
+                    return jsonify({'success': False, 'error': f'{field_name}必须是有效数字'}), 400
+            
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
 
 # Vercel Serverless架构：每次请求时自动执行模拟
 # ★★★ 已移除 @app.before_request 自动模拟，避免每次访问页面都调用AI消耗Token ★★★
@@ -54,6 +106,7 @@ def get_survival_status():
         "protein_level": round(status['protein_level'], 1),
         "humidity": round(status['humidity'], 1),
         "pressure": round(status['pressure'], 1),
+        "temperature": round(status.get('temperature', 22.0), 1),
         "radiation_level": round(status['radiation_level'], 1),
         "backup_power_hours": round(status['backup_power_hours'], 1),
         "emergency_mode": status.get('emergency_mode', False),
@@ -117,9 +170,11 @@ def adjust_parameters():
 # ==================== 食物资源管理 API ====================
 
 @app.route('/api/food/add', methods=['POST'])
+@validate_json('name', 'quantity')
+@validate_range('quantity', min_val=0)
 def add_food():
     """添加食物"""
-    data = request.get_json() or {}
+    data = request.get_json()
     result = ai_engine.add_food_item(data)
     return jsonify(result)
 
@@ -179,9 +234,11 @@ def get_medical_items():
     })
 
 @app.route('/api/medical/add', methods=['POST'])
+@validate_json('name', 'quantity')
+@validate_range('quantity', min_val=0)
 def add_medical():
     """添加医疗物品"""
-    data = request.get_json() or {}
+    data = request.get_json()
     result = ai_engine.add_medical_item(data)
     return jsonify(result)
 
@@ -343,6 +400,7 @@ def configure_emergency():
     return jsonify(result)
 
 @app.route('/api/emergency/trigger-manual', methods=['POST'])
+@limiter.limit("10 per minute")  # 紧急协议限制每分钟10次
 def trigger_emergency_manual():
     """手动触发紧急协议"""
     data = request.get_json() or {}
@@ -361,6 +419,7 @@ def simulate_emergency_scenario():
     return jsonify(result)
 
 @app.route('/api/simulate_step', methods=['POST'])
+@limiter.limit("30 per minute")  # 模拟步骤限制每分钟30次
 def manual_simulate_step():
     """手动触发模拟步骤（用于前端定时调用）"""
     try:
@@ -389,9 +448,12 @@ def update_system_settings_api():
 # ==================== 宇航员管理 API ====================
 
 @app.route('/api/crew/add', methods=['POST'])
+@validate_json('name')
+@validate_range('weight', min_val=30, max_val=150)
+@validate_range('age', min_val=18, max_val=65)
 def add_crew():
     """添加宇航员"""
-    data = request.get_json() or {}
+    data = request.get_json()
     result = ai_engine.add_crew_member(data)
     return jsonify(result)
 
