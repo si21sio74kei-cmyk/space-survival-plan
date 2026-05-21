@@ -15,18 +15,31 @@ parent_dir = os.path.dirname(current_dir)
 if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
 
-from config import DEEPSEEK_API_KEY
+from config import ZHIPU_API_KEY, ZHIPU_MODEL
+
+# 导入太空数据API（可选）
+try:
+    from backend.space_data_api import space_api
+    SPACE_DATA_ENABLED = True
+except ImportError:
+    SPACE_DATA_ENABLED = False
+    print("警告: 太空数据API模块未找到，将使用模拟数据")
+
+# 更新为 GLM-4.5-Air
+ZHIPU_MODEL = "glm-4.5-air"
 
 # 延迟初始化client，避免API KEY为空时失败
 client = None
-if DEEPSEEK_API_KEY:
+if ZHIPU_API_KEY:
     try:
+        # 智谱 API 使用 OpenAI 兼容接口
         client = OpenAI(
-            api_key=DEEPSEEK_API_KEY,
-            base_url="https://api.deepseek.com/v1"
+            api_key=ZHIPU_API_KEY,
+            base_url="https://open.bigmodel.cn/api/paas/v4"
         )
+        print(f"智谱 AI (GLM-4.5-Air) 客户端初始化成功")
     except Exception as e:
-        print(f"AI client initialization failed: {e}")
+        print(f"智谱 AI 客户端初始化失败: {e}")
         client = None
 
 # Vercel Serverless环境：使用函数属性模拟持久化存储
@@ -345,6 +358,7 @@ class AISurvivalEngine:
                 'type': report_type,
                 'mission_day': state['mission_day'],
                 'summary': f'任务第{state["mission_day"]}天，系统运行基本稳定',
+                'report': f'任务第{state["mission_day"]}天，系统运行基本稳定。建议继续监控能源消耗，保持医疗冷链温度，优化营养配给方案。',
                 'recommendations': ['继续监控能源消耗', '保持医疗冷链温度', '优化营养配给方案'],
                 'timestamp': datetime.datetime.utcnow().isoformat()
             }
@@ -386,7 +400,7 @@ class AISurvivalEngine:
 控制在150字以内。
 """
             response = client.chat.completions.create(
-                model="deepseek-chat",
+                model=ZHIPU_MODEL,
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.7
             )
@@ -399,10 +413,12 @@ class AISurvivalEngine:
                 'timestamp': datetime.datetime.utcnow().isoformat()
             }
         except Exception as e:
+            error_msg = str(e)[:50]
             return {
                 'type': report_type,
                 'mission_day': state['mission_day'],
-                'summary': f'AI报告生成失败: {str(e)[:50]}',
+                'summary': f'AI连接失败: {error_msg}',
+                'report': f'AI连接失败: {error_msg}。请检查API密钥是否有效，或联系系统管理员。',
                 'timestamp': datetime.datetime.utcnow().isoformat()
             }
 
@@ -460,7 +476,7 @@ class AISurvivalEngine:
 控制在80字以内。
 """
             response = client.chat.completions.create(
-                model="deepseek-chat",
+                model=ZHIPU_MODEL,
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.7
             )
@@ -578,22 +594,67 @@ class AISurvivalEngine:
         if status['food_stability'] < 50:
             diet_advice = "低能耗营养模式：减少高蛋白摄入，增加合成碳水比例。"
         
-        # 2. 随机事件触发 (太阳风暴/能源危机)
-        event_log = []
-        radiation_spike = random.random() < 0.05
-        emergency_mode = False
-        
-        if radiation_spike:
-            status['radiation_level'] = random.uniform(50, 95)
-            event_log.append("警告：检测到强太阳辐射风暴！")
-            event_log.append("AI决策：已启动地下储藏模式，优先保障医疗冷链。")
-            status['food_stability'] -= 5
-            status['medical_safety'] = min(100, status['medical_safety'] + 5)
-            status['medical_temp'] = max(-80, status['medical_temp'] - 2)
-            emergency_mode = True
+        # ★★★ 新增：同步真实太空天气数据到总控制台 ★★★
+        space_weather_data = None
+        if SPACE_DATA_ENABLED:
+            try:
+                # 获取太空天气摘要（带缓存，不会频繁请求）
+                space_weather_data = space_api.get_space_weather_summary()
+                
+                # 根据风险等级调整辐射水平
+                risk_level = space_weather_data.get('risk_level', 'low')
+                if risk_level == 'critical':
+                    # 严重风险：辐射大幅升高
+                    status['radiation_level'] = min(100, status['radiation_level'] + 30)
+                    event_log.append("⚠️ NASA警报：检测到X级太阳耀斑！辐射水平急剧上升")
+                    emergency_mode = True
+                elif risk_level == 'high':
+                    # 高风险：辐射中度升高
+                    status['radiation_level'] = min(100, status['radiation_level'] + 15)
+                    event_log.append("⚠️ NASA警报：M级太阳耀斑活动，辐射增强")
+                elif risk_level == 'medium':
+                    # 中等风险：轻微影响
+                    status['radiation_level'] = min(100, status['radiation_level'] + 5)
+                    event_log.append("ℹ️ NASA监测：太阳活动活跃，辐射略升")
+                else:
+                    # 低风险：正常衰减
+                    status['radiation_level'] = max(0, status['radiation_level'] - 2)
+                    event_log.append("✅ NASA监测：太空环境稳定")
+                
+                # 记录警告信息
+                warnings = space_weather_data.get('warnings', [])
+                if warnings:
+                    for warning in warnings[:2]:  # 最多显示2条警告
+                        event_log.append(f"🌞 {warning}")
+                        
+            except Exception as e:
+                # API调用失败时降级为随机模拟
+                event_log.append(f"⚠️ 太空数据API暂时不可用: {str(e)[:30]}")
+                radiation_spike = random.random() < 0.05
+                if radiation_spike:
+                    status['radiation_level'] = random.uniform(50, 95)
+                    event_log.append("警告：检测到强太阳辐射风暴！（模拟数据）")
+                    status['food_stability'] -= 5
+                    status['medical_safety'] = min(100, status['medical_safety'] + 5)
+                    status['medical_temp'] = max(-80, status['medical_temp'] - 2)
+                    emergency_mode = True
+                else:
+                    status['radiation_level'] = max(0, status['radiation_level'] - 2)
+                    event_log.append("环境监测：舱内环境稳定。（模拟数据）")
         else:
-            status['radiation_level'] = max(0, status['radiation_level'] - 2)
-            event_log.append("环境监测：舱内环境稳定。")
+            # 太空数据API未启用时使用原有随机逻辑
+            radiation_spike = random.random() < 0.05
+            if radiation_spike:
+                status['radiation_level'] = random.uniform(50, 95)
+                event_log.append("警告：检测到强太阳辐射风暴！")
+                event_log.append("AI决策：已启动地下储藏模式，优先保障医疗冷链。")
+                status['food_stability'] -= 5
+                status['medical_safety'] = min(100, status['medical_safety'] + 5)
+                status['medical_temp'] = max(-80, status['medical_temp'] - 2)
+                emergency_mode = True
+            else:
+                status['radiation_level'] = max(0, status['radiation_level'] - 2)
+                event_log.append("环境监测：舱内环境稳定。")
             
         # 3. AI 动态能源调节联动
         if status['energy_level'] < 30:
@@ -743,7 +804,9 @@ class AISurvivalEngine:
             "emergency_mode": emergency_mode,
             "predictions": predictions,
             "estimated_survival_days": estimated_survival_days,
-            "logs": event_log
+            "logs": event_log,
+            # ★★★ 新增：太空天气数据同步到总控制台 ★★★
+            "space_weather": space_weather_data if SPACE_DATA_ENABLED else None
         }
     
     def adjust_parameters(self, adjustments):

@@ -107,6 +107,7 @@ function setupNavigation() {
             else if (text.includes('设置')) module = 'settings';
             else if (text.includes('AI对话')) module = 'ai';
             else if (text.includes('参数')) module = 'custom';
+            else if (text.includes('太空')) module = 'space-data';
             else module = 'dashboard';
             
             currentModule = module;
@@ -179,6 +180,9 @@ async function loadModuleContent(module) {
             break;
         case 'settings':
             await loadSettingsModule();
+            break;
+        case 'space-data':
+            await loadSpaceDataModule();
             break;
     }
 }
@@ -2242,6 +2246,11 @@ async function refreshData(charts) {
             }
         }
         
+        // ★★★ 10. 更新总控制台太空天气显示（如果数据存在）★★★
+        if (survivalStatus.space_weather) {
+            updateSpaceWeatherOnDashboard(survivalStatus.space_weather);
+        }
+        
         console.log('=== 数据刷新完成 ===');
         
     } catch (error) {
@@ -2253,3 +2262,363 @@ async function refreshData(charts) {
 window.onload = () => {
     init();
 };
+
+// ==================== 太空数据中心模块 ====================
+
+async function loadSpaceDataModule() {
+    console.log('Loading space data module...');
+    
+    // 加载太空天气数据
+    try {
+        const weatherResponse = await fetch('/api/space-weather/summary');
+        const weatherData = await weatherResponse.json();
+        displaySpaceWeather(weatherData);
+    } catch (error) {
+        console.error('Failed to load space weather:', error);
+        document.getElementById('space-weather-summary').innerHTML = '<p style="color: #ff4444;">加载失败</p>';
+    }
+    
+    // 加载实时态势感知
+    try {
+        const situationalResponse = await fetch('/api/situational-awareness');
+        const situationalData = await situationalResponse.json();
+        displaySituationalAwareness(situationalData);
+    } catch (error) {
+        console.error('Failed to load situational awareness:', error);
+        document.getElementById('situational-awareness').innerHTML = '<p style="color: #ff4444;">加载失败</p>';
+    }
+    
+    // 加载视觉增强数据
+    try {
+        const visualResponse = await fetch('/api/visual-enhancement');
+        const visualData = await visualResponse.json();
+        displayVisualEnhancement(visualData);
+    } catch (error) {
+        console.error('Failed to load visual enhancement:', error);
+        document.getElementById('visual-enhancement').innerHTML = '<p style="color: #ff4444;">加载失败</p>';
+    }
+    
+    // 加载地球环境数据
+    try {
+        const earthResponse = await fetch('/api/earth-environment');
+        const earthData = await earthResponse.json();
+        displayEarthEnvironment(earthData);
+    } catch (error) {
+        console.error('Failed to load earth environment:', error);
+        document.getElementById('earth-environment').innerHTML = '<p style="color: #ff4444;">加载失败</p>';
+    }
+}
+
+function displaySpaceWeather(data) {
+    if (data.error) {
+        document.getElementById('space-weather-summary').innerHTML = `<p style="color: #ff4444;">${data.error}</p>`;
+        return;
+    }
+    
+    const riskColors = {
+        'low': '#00f3ff',
+        'medium': '#ff9500',
+        'high': '#ff4444',
+        'critical': '#ff0000'
+    };
+    
+    const riskColor = riskColors[data.risk_level] || '#fff';
+    const riskText = {
+        'low': '低风险',
+        'medium': '中等风险',
+        'high': '高风险',
+        'critical': '严重风险'
+    };
+    
+    let html = `
+        <div style="padding: 15px; background: rgba(0,0,0,0.3); border-radius: 8px; margin-bottom: 10px;">
+            <h4 style="color: ${riskColor}; margin: 0 0 10px 0;">
+                <i class="fas fa-exclamation-triangle"></i> 风险等级: ${riskText[data.risk_level] || data.risk_level}
+            </h4>
+            <p style="margin: 5px 0;">时间戳: ${new Date(data.timestamp).toLocaleString('zh-CN')}</p>
+        </div>
+    `;
+    
+    if (data.warnings && data.warnings.length > 0) {
+        html += '<div style="padding: 10px; background: rgba(255,68,68,0.1); border-left: 3px solid #ff4444; border-radius: 5px; margin-bottom: 10px;">';
+        html += '<h5 style="color: #ff4444; margin: 0 0 10px 0;"><i class="fas fa-bell"></i> 警告信息</h5>';
+        html += '<ul style="margin: 0; padding-left: 20px;">';
+        data.warnings.forEach(warning => {
+            html += `<li style="color: #fff; margin: 5px 0;">${warning}</li>`;
+        });
+        html += '</ul></div>';
+    }
+    
+    html += `
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px;">
+            <div style="padding: 10px; background: rgba(0,243,255,0.1); border-radius: 5px; text-align: center;">
+                <div style="color: var(--tech-cyan); font-size: 24px; font-weight: bold;">${data.recent_events.cme_count}</div>
+                <div style="color: #fff; font-size: 12px;">太阳风暴事件</div>
+            </div>
+            <div style="padding: 10px; background: rgba(0,243,255,0.1); border-radius: 5px; text-align: center;">
+                <div style="color: var(--tech-cyan); font-size: 24px; font-weight: bold;">${data.recent_events.rbe_count}</div>
+                <div style="color: #fff; font-size: 12px;">辐射事件</div>
+            </div>
+            <div style="padding: 10px; background: rgba(0,243,255,0.1); border-radius: 5px; text-align: center;">
+                <div style="color: var(--tech-cyan); font-size: 24px; font-weight: bold;">${data.recent_events.flare_count}</div>
+                <div style="color: #fff; font-size: 12px;">太阳耀斑</div>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('space-weather-summary').innerHTML = html;
+}
+
+function displaySituationalAwareness(data) {
+    if (data.error) {
+        document.getElementById('situational-awareness').innerHTML = `<p style="color: #ff4444;">${data.error}</p>`;
+        return;
+    }
+    
+    let html = '<div style="display: grid; gap: 15px;">';
+    
+    // ISS位置
+    if (data.iss_position && data.iss_position.message === 'success') {
+        const iss = data.iss_position.iss_position;
+        html += `
+            <div style="padding: 15px; background: rgba(0,0,0,0.3); border-radius: 8px;">
+                <h4 style="color: var(--tech-cyan); margin: 0 0 10px 0;">
+                    <i class="fas fa-satellite"></i> ISS 国际空间站
+                </h4>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; color: #fff;">
+                    <div>纬度: <span style="color: var(--tech-cyan);">${parseFloat(iss.latitude).toFixed(4)}°</span></div>
+                    <div>经度: <span style="color: var(--tech-cyan);">${parseFloat(iss.longitude).toFixed(4)}°</span></div>
+                    <div colspan="2">时间: ${new Date(iss.timestamp * 1000).toLocaleString('zh-CN')}</div>
+                </div>
+            </div>
+        `;
+    }
+    
+    // 宇航员
+    if (data.astronauts && data.astronauts.message === 'success') {
+        html += `
+            <div style="padding: 15px; background: rgba(0,0,0,0.3); border-radius: 8px;">
+                <h4 style="color: var(--tech-cyan); margin: 0 0 10px 0;">
+                    <i class="fas fa-user-astronaut"></i> 在轨宇航员: ${data.astronauts.number}人
+                </h4>
+                <ul style="margin: 0; padding-left: 20px; color: #fff;">
+        `;
+        if (data.astronauts.people) {
+            data.astronauts.people.forEach(person => {
+                html += `<li style="margin: 5px 0;">${person.name} - ${person.craft}</li>`;
+            });
+        }
+        html += '</ul></div>';
+    }
+    
+    // SpaceX最新发射
+    if (data.latest_spacex_launch && !data.latest_spacex_launch.error) {
+        const launch = data.latest_spacex_launch;
+        html += `
+            <div style="padding: 15px; background: rgba(0,0,0,0.3); border-radius: 8px;">
+                <h4 style="color: var(--tech-cyan); margin: 0 0 10px 0;">
+                    <i class="fas fa-rocket"></i> SpaceX 最新发射
+                </h4>
+                <div style="color: #fff;">
+                    <p style="margin: 5px 0;">任务名称: <span style="color: var(--tech-cyan);">${launch.name || 'N/A'}</span></p>
+                    <p style="margin: 5px 0;">发射日期: <span style="color: var(--tech-cyan);">${new Date(launch.date_utc || launch.date_local).toLocaleDateString('zh-CN')}</span></p>
+                    <p style="margin: 5px 0;">状态: <span style="color: ${launch.success ? '#00ff00' : '#ff4444'};">${launch.success ? '成功' : '失败'}</span></p>
+                </div>
+            </div>
+        `;
+    }
+    
+    html += '</div>';
+    document.getElementById('situational-awareness').innerHTML = html;
+}
+
+function displayVisualEnhancement(data) {
+    if (data.error) {
+        document.getElementById('visual-enhancement').innerHTML = `<p style="color: #ff4444;">${data.error}</p>`;
+        return;
+    }
+    
+    let html = '<div style="display: grid; gap: 15px;">';
+    
+    // 火星照片
+    if (data.mars_photos && data.mars_photos.length > 0) {
+        html += `
+            <div style="padding: 15px; background: rgba(0,0,0,0.3); border-radius: 8px;">
+                <h4 style="color: var(--tech-cyan); margin: 0 0 10px 0;">
+                    <i class="fas fa-globe-americas"></i> 火星地表照片 (Curiosity)
+                </h4>
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px;">
+        `;
+        data.mars_photos.slice(0, 6).forEach(photo => {
+            html += `
+                <div style="border-radius: 5px; overflow: hidden;">
+                    <img src="${photo.img_src}" alt="Mars Photo" style="width: 100%; height: 100px; object-fit: cover;">
+                    <div style="padding: 5px; background: rgba(0,0,0,0.5); color: #fff; font-size: 10px;">
+                        Sol ${photo.sol} | ${photo.camera.full_name}
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div></div>';
+    }
+    
+    // 月球数据
+    if (data.moon_data && !data.moon_data.error) {
+        const moon = data.moon_data;
+        html += `
+            <div style="padding: 15px; background: rgba(0,0,0,0.3); border-radius: 8px;">
+                <h4 style="color: var(--tech-cyan); margin: 0 0 10px 0;">
+                    <i class="fas fa-moon"></i> 月球参数
+                </h4>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; color: #fff; font-size: 14px;">
+                    <div>质量: ${(moon.mass?.massValue || 0).toExponential(2)} kg</div>
+                    <div>半径: ${moon.meanRadius || 'N/A'} km</div>
+                    <div>密度: ${moon.density || 'N/A'} g/cm³</div>
+                    <div>重力: ${moon.gravity || 'N/A'} m/s²</div>
+                </div>
+            </div>
+        `;
+    }
+    
+    html += '</div>';
+    document.getElementById('visual-enhancement').innerHTML = html;
+}
+
+function displayEarthEnvironment(data) {
+    if (data.error) {
+        document.getElementById('earth-environment').innerHTML = `<p style="color: #ff4444;">${data.error}</p>`;
+        return;
+    }
+    
+    let html = '<div style="display: grid; gap: 15px;">';
+    
+    // 自然灾害
+    if (data.disasters && data.disasters.length > 0) {
+        html += `
+            <div style="padding: 15px; background: rgba(0,0,0,0.3); border-radius: 8px;">
+                <h4 style="color: var(--tech-cyan); margin: 0 0 10px 0;">
+                    <i class="fas fa-fire"></i> 近期自然灾害 (${data.disasters.length}个事件)
+                </h4>
+                <div style="max-height: 200px; overflow-y: auto;">
+        `;
+        data.disasters.slice(0, 5).forEach(event => {
+            html += `
+                <div style="padding: 8px; margin: 5px 0; background: rgba(255,68,68,0.1); border-left: 3px solid #ff4444; border-radius: 3px;">
+                    <div style="color: #fff; font-size: 14px;">${event.title || '未知事件'}</div>
+                    <div style="color: #aaa; font-size: 12px;">${new Date(event.geometry?.[0]?.date || '').toLocaleDateString('zh-CN')}</div>
+                </div>
+            `;
+        });
+        html += '</div></div>';
+    }
+    
+    // 地震数据
+    if (data.earthquakes && data.earthquakes.length > 0) {
+        html += `
+            <div style="padding: 15px; background: rgba(0,0,0,0.3); border-radius: 8px;">
+                <h4 style="color: var(--tech-cyan); margin: 0 0 10px 0;">
+                    <i class="fas fa-house-damage"></i> 最近地震 (${data.earthquakes.length}次)
+                </h4>
+                <div style="max-height: 200px; overflow-y: auto;">
+        `;
+        data.earthquakes.slice(0, 5).forEach(eq => {
+            const props = eq.properties;
+            html += `
+                <div style="padding: 8px; margin: 5px 0; background: rgba(255,149,0,0.1); border-left: 3px solid #ff9500; border-radius: 3px;">
+                    <div style="color: #fff; font-size: 14px;">M${props.mag} - ${props.place || '未知地点'}</div>
+                    <div style="color: #aaa; font-size: 12px;">${new Date(props.time).toLocaleString('zh-CN')}</div>
+                </div>
+            `;
+        });
+        html += '</div></div>';
+    }
+    
+    // 空气质量
+    if (data.air_quality && data.air_quality.status === 'ok') {
+        const aqi = data.air_quality.data.aqi;
+        const aqiColor = aqi <= 50 ? '#00ff00' : aqi <= 100 ? '#ffff00' : aqi <= 150 ? '#ff9500' : '#ff4444';
+        html += `
+            <div style="padding: 15px; background: rgba(0,0,0,0.3); border-radius: 8px;">
+                <h4 style="color: var(--tech-cyan); margin: 0 0 10px 0;">
+                    <i class="fas fa-wind"></i> 空气质量指数 (AQI)
+                </h4>
+                <div style="text-align: center;">
+                    <div style="font-size: 48px; font-weight: bold; color: ${aqiColor};">${aqi}</div>
+                    <div style="color: #fff; margin-top: 10px;">${data.air_quality.data.city.name}</div>
+                </div>
+            </div>
+        `;
+    }
+    
+    html += '</div>';
+    document.getElementById('earth-environment').innerHTML = html;
+}
+
+// ==================== 总控制台太空天气显示 ====================
+
+function updateSpaceWeatherOnDashboard(spaceWeather) {
+    // 在总控制台顶部状态栏附近显示太空天气风险等级
+    
+    // 检查是否已存在太空天气指示器
+    let indicator = document.getElementById('space-weather-indicator');
+    
+    if (!indicator) {
+        // 创建新的指示器（插入到状态指示器区域）
+        const statusIndicators = document.querySelector('.status-indicators');
+        if (!statusIndicators) return;
+        
+        indicator = document.createElement('span');
+        indicator.id = 'space-weather-indicator';
+        indicator.style.cursor = 'pointer';
+        indicator.title = '点击查看太空天气详情';
+        statusIndicators.appendChild(indicator);
+        
+        // 点击跳转到太空数据中心
+        indicator.addEventListener('click', () => {
+            const spaceDataNav = Array.from(document.querySelectorAll('.sidebar li'))
+                .find(li => li.innerText.includes('太空'));
+            if (spaceDataNav) {
+                spaceDataNav.click();
+            }
+        });
+    }
+    
+    // 根据风险等级设置颜色和图标
+    const riskColors = {
+        'low': '#00f3ff',
+        'medium': '#ff9500',
+        'high': '#ff4444',
+        'critical': '#ff0000'
+    };
+    
+    const riskIcons = {
+        'low': 'fa-check-circle',
+        'medium': 'fa-exclamation-circle',
+        'high': 'fa-exclamation-triangle',
+        'critical': 'fa-radiation'
+    };
+    
+    const riskText = {
+        'low': '稳定',
+        'medium': '活跃',
+        'high': '危险',
+        'critical': '严重'
+    };
+    
+    const riskLevel = spaceWeather.risk_level || 'low';
+    const color = riskColors[riskLevel];
+    const icon = riskIcons[riskLevel];
+    const text = riskText[riskLevel];
+    
+    indicator.innerHTML = `
+        <i class="fas ${icon}" style="color: ${color};"></i> 
+        <span style="color: ${color};">太空:${text}</span>
+    `;
+    
+    // 如果有警告，添加闪烁效果
+    if (spaceWeather.warnings && spaceWeather.warnings.length > 0) {
+        indicator.style.animation = 'pulse 2s infinite';
+    } else {
+        indicator.style.animation = 'none';
+    }
+}

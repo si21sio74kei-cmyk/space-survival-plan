@@ -22,6 +22,14 @@ if current_dir not in sys.path:
 # 导入AI引擎
 from ai_engine import engine as ai_engine
 
+# 导入太空数据API
+try:
+    from backend.space_data_api import space_api
+    SPACE_API_AVAILABLE = True
+except ImportError:
+    SPACE_API_AVAILABLE = False
+    print("警告: space_data_api模块未找到，太空数据功能将不可用")
+
 app = Flask(__name__, 
             template_folder='templates',
             static_folder='templates',
@@ -510,6 +518,274 @@ def generate_custom_report():
     focus_areas = data.get('focus_areas', ['survival', 'resources'])
     result = ai_engine.generate_custom_report(report_type, depth, focus_areas)
     return jsonify(result)
+
+# ==================== 太空与地球数据 API ====================
+
+@app.route('/api/space-weather')
+def get_space_weather():
+    """获取太空天气数据（第一批：太阳风暴、辐射、耀斑）"""
+    if not SPACE_API_AVAILABLE:
+        return jsonify({'error': '太空数据API不可用'}), 503
+    
+    try:
+        data = space_api.get_all_space_weather()
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/space-weather/summary')
+def get_space_weather_summary():
+    """获取太空天气摘要"""
+    if not SPACE_API_AVAILABLE:
+        return jsonify({'error': '太空数据API不可用'}), 503
+    
+    try:
+        summary = space_api.get_space_weather_summary()
+        return jsonify(summary)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/space-weather/storms')
+def get_solar_storms():
+    """获取太阳风暴数据"""
+    if not SPACE_API_AVAILABLE:
+        return jsonify({'error': '太空数据API不可用'}), 503
+    
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    
+    try:
+        data = space_api.get_solar_storms(start_date, end_date)
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/space-weather/radiation')
+def get_radiation_data():
+    """获取辐射数据"""
+    if not SPACE_API_AVAILABLE:
+        return jsonify({'error': '太空数据API不可用'}), 503
+    
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    
+    try:
+        data = space_api.get_radiation_data(start_date, end_date)
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/space-weather/flares')
+def get_solar_flares():
+    """获取太阳耀斑数据"""
+    if not SPACE_API_AVAILABLE:
+        return jsonify({'error': '太空数据API不可用'}), 503
+    
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    
+    try:
+        data = space_api.get_solar_flares(start_date, end_date)
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/situational-awareness')
+def get_situational_awareness():
+    """获取实时态势感知数据（第二批：ISS、宇航员、SpaceX）"""
+    if not SPACE_API_AVAILABLE:
+        return jsonify({'error': '太空数据API不可用'}), 503
+    
+    try:
+        data = space_api.get_situational_awareness()
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/iss/position')
+def get_iss_position():
+    """获取ISS实时位置"""
+    if not SPACE_API_AVAILABLE:
+        return jsonify({'error': '太空数据API不可用'}), 503
+    
+    try:
+        data = space_api.get_iss_position()
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/astronauts')
+def get_astronauts():
+    """获取当前在太空的宇航员"""
+    if not SPACE_API_AVAILABLE:
+        return jsonify({'error': '太空数据API不可用'}), 503
+    
+    try:
+        data = space_api.get_astronauts_in_space()
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/spacex/latest')
+def get_spacex_latest():
+    """获取SpaceX最新发射任务"""
+    if not SPACE_API_AVAILABLE:
+        return jsonify({'error': '太空数据API不可用'}), 503
+    
+    try:
+        data = space_api.get_spacex_latest_launch()
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/spacex/rockets')
+def get_spacex_rockets():
+    """获取SpaceX火箭数据"""
+    if not SPACE_API_AVAILABLE:
+        return jsonify({'error': '太空数据API不可用'}), 503
+    
+    try:
+        data = space_api.get_spacex_rockets()
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/visual-enhancement')
+def get_visual_enhancement():
+    """获取视觉增强数据（第三批：火星照片、地球照片、月球/行星）"""
+    if not SPACE_API_AVAILABLE:
+        return jsonify({'error': '太空数据API不可用'}), 503
+    
+    try:
+        data = space_api.get_visual_enhancement_data()
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/mars/photos')
+def get_mars_photos():
+    """获取火星车照片"""
+    if not SPACE_API_AVAILABLE:
+        return jsonify({'error': '太空数据API不可用'}), 503
+    
+    rover = request.args.get('rover', 'curiosity')
+    sol = request.args.get('sol', 1000, type=int)
+    camera = request.args.get('camera')
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 25, type=int)
+    
+    try:
+        data = space_api.get_mars_photos(rover, sol, camera, page, per_page)
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/earth/photos')
+def get_earth_photos():
+    """获取NASA EPIC地球照片"""
+    if not SPACE_API_AVAILABLE:
+        return jsonify({'error': '太空数据API不可用'}), 503
+    
+    date = request.args.get('date')
+    
+    try:
+        data = space_api.get_epic_earth_photos(date)
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/moon')
+def get_moon_data():
+    """获取月球数据"""
+    if not SPACE_API_AVAILABLE:
+        return jsonify({'error': '太空数据API不可用'}), 503
+    
+    try:
+        data = space_api.get_moon_data()
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/planets')
+def get_planets():
+    """获取行星数据"""
+    if not SPACE_API_AVAILABLE:
+        return jsonify({'error': '太空数据API不可用'}), 503
+    
+    try:
+        data = space_api.get_planets_data()
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/earth-environment')
+def get_earth_environment():
+    """获取地球环境监控数据（第四批：灾害、地震、空气质量、天气）"""
+    if not SPACE_API_AVAILABLE:
+        return jsonify({'error': '太空数据API不可用'}), 503
+    
+    try:
+        data = space_api.get_earth_environment_data()
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/earth/disasters')
+def get_earth_disasters():
+    """获取地球自然灾害事件"""
+    if not SPACE_API_AVAILABLE:
+        return jsonify({'error': '太空数据API不可用'}), 503
+    
+    limit = request.args.get('limit', 20, type=int)
+    days = request.args.get('days', 7, type=int)
+    
+    try:
+        data = space_api.get_earth_disasters(limit, days)
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/earthquakes')
+def get_earthquakes():
+    """获取全球地震数据"""
+    if not SPACE_API_AVAILABLE:
+        return jsonify({'error': '太空数据API不可用'}), 503
+    
+    min_magnitude = request.args.get('min_magnitude', 5.0, type=float)
+    days = request.args.get('days', 7, type=int)
+    
+    try:
+        data = space_api.get_earthquakes(min_magnitude, days)
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/air-quality')
+def get_air_quality():
+    """获取空气质量数据"""
+    if not SPACE_API_AVAILABLE:
+        return jsonify({'error': '太空数据API不可用'}), 503
+    
+    location = request.args.get('location', 'here')
+    token = request.args.get('token', 'demo')
+    
+    try:
+        data = space_api.get_air_quality(location, token)
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/weather/macau')
+def get_macau_weather():
+    """获取澳门天气"""
+    if not SPACE_API_AVAILABLE:
+        return jsonify({'error': '太空数据API不可用'}), 503
+    
+    try:
+        data = space_api.get_macau_weather()
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 # ==================== 本地运行 ====================
 

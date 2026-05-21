@@ -43,6 +43,7 @@
                     <li><i class="fas fa-cog"></i> 系统设置</li>
                     <li><i class="fas fa-brain"></i> AI对话</li>
                     <li><i class="fas fa-edit"></i> 参数调整</li>
+                    <li><i class="fas fa-satellite"></i> 太空数据中心</li>
                 </ul>
             </nav>
 
@@ -224,6 +225,55 @@
                         <div id="module-title">系统设置 SYSTEM SETTINGS</div>
                     </div>
                     <div id="settings-content" style="padding: 20px;"></div>
+                </div>
+                
+                <!-- 太空数据中心视图 -->
+                <div id="view-space-data" class="view-panel" style="display: none;">
+                    <div class="dashboard-header">
+                        <div id="module-title">太空数据中心 SPACE DATA CENTER</div>
+                    </div>
+                    <div id="space-data-content" style="padding: 20px;">
+                        <!-- 太空天气面板 -->
+                        <div class="glass-panel" style="margin-bottom: 20px; padding: 15px;">
+                            <h3 style="color: var(--tech-cyan); margin-bottom: 10px;">
+                                <i class="fas fa-sun"></i> 太空天气 SPACE WEATHER
+                            </h3>
+                            <div id="space-weather-summary" style="color: #fff;">
+                                <p>加载中...</p>
+                            </div>
+                            <div id="space-weather-details" style="margin-top: 10px;"></div>
+                        </div>
+                        
+                        <!-- 实时态势感知 -->
+                        <div class="glass-panel" style="margin-bottom: 20px; padding: 15px;">
+                            <h3 style="color: var(--tech-cyan); margin-bottom: 10px;">
+                                <i class="fas fa-satellite"></i> 实时态势 SITUATIONAL AWARENESS
+                            </h3>
+                            <div id="situational-awareness" style="color: #fff;">
+                                <p>加载中...</p>
+                            </div>
+                        </div>
+                        
+                        <!-- 视觉增强数据 -->
+                        <div class="glass-panel" style="margin-bottom: 20px; padding: 15px;">
+                            <h3 style="color: var(--tech-cyan); margin-bottom: 10px;">
+                                <i class="fas fa-image"></i> 深空影像 DEEP SPACE IMAGERY
+                            </h3>
+                            <div id="visual-enhancement" style="color: #fff;">
+                                <p>加载中...</p>
+                            </div>
+                        </div>
+                        
+                        <!-- 地球环境监控 -->
+                        <div class="glass-panel" style="padding: 15px;">
+                            <h3 style="color: var(--tech-cyan); margin-bottom: 10px;">
+                                <i class="fas fa-globe-asia"></i> 地球监控 EARTH MONITORING
+                            </h3>
+                            <div id="earth-environment" style="color: #fff;">
+                                <p>加载中...</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </main>
 
