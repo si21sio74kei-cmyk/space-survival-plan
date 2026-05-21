@@ -508,9 +508,18 @@ class AISurvivalEngine:
         return ai_advice, ai_action_taken
 
     def simulate_step(self):
-        """模拟一步系统演化（Vercel兼容 - 使用内存存储）"""
+        """模拟一步系统演化（Vercel兼容 - 使用内存存储）
+        
+        升级说明：
+        - 强化AI规则决策引擎（4条核心规则）
+        - 实现紧急模式自动触发
+        - 增强资源联动计算
+        - 生成动态AI决策日志
+        """
         status = self.get_current_status()
         state, logs = get_persistent_state()
+        event_log = []  # 用于记录本次模拟的事件
+        emergency_mode = False  # 紧急模式标志
         
         # 1. 基础衰减与消耗
         energy_decay = random.uniform(0.2, 0.8)
@@ -664,28 +673,64 @@ class AISurvivalEngine:
             if status['energy_level'] < 10:
                 emergency_mode = True
 
-        # 4. 执行多系统联动逻辑
+        # ==================== AI规则决策引擎（核心升级）====================
         
-        # 能源联动：能源不足时自动降低次级系统
+        # 规则1: 能源不足时启动低功耗模式
         if status['energy_level'] < 40:
             reduction_rate = (40 - status['energy_level']) * 0.1
             status['food_stability'] -= reduction_rate
-            event_log.append(f"能源联动：已降低次级冷却系统精度{reduction_rate:.1f}%")
+            status['backup_power_hours'] += 12  # 延长备用电源时间
+            event_log.append(f"[AI] Energy dropped below safe threshold ({status['energy_level']:.1f}%)")
+            event_log.append(f"[AI] Low-power mode activated")
+            event_log.append(f"[AI] Reduced non-critical cooling precision by {reduction_rate:.1f}%")
+            event_log.append(f"[AI] Estimated survival days +12 due to power saving")
         
-        # 辐射联动：辐射升高时强化医疗保护
-        if status['radiation_level'] > 50:
-            protection_boost = (status['radiation_level'] - 50) * 0.05
+        # 规则2: 辐射过高时启动防御模式
+        if status['radiation_level'] > 70:
+            protection_boost = (status['radiation_level'] - 70) * 0.08
             status['medical_safety'] = min(100, status['medical_safety'] + protection_boost)
             status['food_stability'] -= protection_boost * 0.5
-            event_log.append(f"辐射联动：已启动地下储藏模式，医疗区防护+{protection_boost:.1f}%")
+            event_log.append(f"[AI] Radiation storm detected ({status['radiation_level']:.1f}%)")
+            event_log.append(f"[AI] Underground storage mode activated")
+            event_log.append(f"[AI] Medical cold-chain priority increased (+{protection_boost:.1f}%)")
+            event_log.append(f"[AI] EVA (extravehicular activity) prohibited")
+            if status['radiation_level'] > 90:
+                emergency_mode = True
+                event_log.append("[AI] EMERGENCY: Critical radiation level!")
         
-        # 食物联动：食物短缺时调整配给
-        if status['food_stability'] < 30:
+        # 规则3: 蛋白质不足时启动营养优化
+        if status['protein_level'] < 20:
+            status['protein_level'] += 2  # AI优化减缓消耗
+            diet_advice = "AI营养优化模式：重新分配每日食谱，降低蛋白质消耗速度"
+            event_log.append(f"[AI] Protein level critical ({status['protein_level']:.1f}%)")
+            event_log.append(f"[AI] AI nutrition optimization activated")
+            event_log.append(f"[AI] Daily meal plan redistributed")
+            event_log.append(f"[AI] Protein consumption rate reduced")
+        
+        # 规则4: 氧气不足时启动低氧生存协议
+        if status['oxygen_level'] < 30:
             status['crew_count'] = max(1, status['crew_count'] - 1)
-            diet_advice = "紧急配给模式：每日热量摄入降低20%"
-            event_log.append("食物联动：已启动紧急营养分配方案")
+            oxygen_boost = (30 - status['oxygen_level']) * 0.05
+            status['oxygen_level'] += oxygen_boost
+            event_log.append(f"[AI] Oxygen level critical ({status['oxygen_level']:.1f}%)")
+            event_log.append(f"[AI] Low-oxygen survival protocol initiated")
+            event_log.append(f"[AI] Non-essential modules shut down")
+            event_log.append(f"[AI] Crew activity level reduced")
+            if status['oxygen_level'] < 15:
+                emergency_mode = True
+                event_log.append("[AI] EMERGENCY: Critical oxygen level!")
         
-        # 重新计算综合生存指数
+        # ==================== 紧急模式触发条件 ====================
+        # 当以下任一条件满足时触发紧急模式
+        if status['oxygen_level'] < 15 or status['energy_level'] < 10 or status['radiation_level'] > 90:
+            emergency_mode = True
+            event_log.append("[AI] ⚠️ EMERGENCY MODE ACTIVATED ⚠️")
+            event_log.append("[AI] All non-essential systems disabled")
+            event_log.append("[AI] Maximum resource conservation protocol")
+        
+        status['emergency_mode'] = emergency_mode
+        
+        # ==================== 多系统联动逻辑 ====================
         status['survival_index'] = (
             status['food_stability'] * 0.2 +
             status['medical_safety'] * 0.3 +
@@ -758,22 +803,34 @@ class AISurvivalEngine:
         # 5. 调用 GLM-4-AIR 进行真实 AI 决策
         ai_advice, ai_action_taken = self.analyze_with_ai(status)
         
-        # 6. 记录日志（内存存储）
-        log_type = "CRITICAL" if emergency_mode else ("WARNING" if radiation_spike else "INFO")
-        log_message = f"AI 决策: {ai_advice} | 执行动作: {'; '.join(ai_action_taken)}"
-        logs.append({
-            'timestamp': datetime.datetime.utcnow().isoformat(),
-            'log_type': log_type,
-            'message': log_message,
-            'ai_decision': ai_advice
-        })
+        # 6. 记录日志（内存存储）- 优先使用event_log中的AI决策
+        log_type = "CRITICAL" if emergency_mode else ("WARNING" if any('critical' in log.lower() or 'emergency' in log.lower() for log in event_log) else "INFO")
+        
+        # 将event_log中的每条记录都添加到logs中
+        for event_message in event_log:
+            logs.append({
+                'timestamp': datetime.datetime.utcnow().isoformat(),
+                'log_type': log_type,
+                'message': event_message,
+                'ai_decision': event_message if '[AI]' in event_message else ''
+            })
+        
+        # 如果event_log为空，使用原有的AI建议
+        if not event_log:
+            log_message = f"AI 决策: {ai_advice} | 执行动作: {'; '.join(ai_action_taken)}"
+            logs.append({
+                'timestamp': datetime.datetime.utcnow().isoformat(),
+                'log_type': log_type,
+                'message': log_message,
+                'ai_decision': ai_advice
+            })
         
         # 只保留最近50条日志
         if len(logs) > 50:
             logs[:] = logs[-50:]
         
-        # 合并 AI 采取的行动到日志
-        if ai_action_taken:
+        # 合并 AI 采取的行动到event_log（用于返回给前端）
+        if ai_action_taken and not event_log:
             event_log.extend([f"✓ {action}" for action in ai_action_taken])
         
         # ★★★ 关键修复：将修改后的 status 写回持久化 state ★★★

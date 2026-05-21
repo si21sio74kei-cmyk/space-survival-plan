@@ -3,6 +3,14 @@ let currentModule = 'dashboard';
 let refreshInterval = null;
 let simulationTimer = null; // 模拟定时器
 
+// ==================== HTML转义工具函数(防止XSS) ====================
+function escapeHtml(text) {
+    if (typeof text !== 'string') return text;
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 // 页面卸载时清理定时器
 window.addEventListener('beforeunload', () => {
     if (refreshInterval) {
@@ -160,6 +168,9 @@ async function switchView(module) {
             // 内容加载完成后立即刷新数据以更新图表
             if (window.charts) {
                 await refreshData(window.charts);
+                // Phase 3升级: 切换模块时重启自动刷新，应用新的刷新频率
+                stopAutoRefresh();
+                startAutoRefresh(window.charts);
             }
         }
     }, 300);
@@ -479,7 +490,7 @@ function displayFoodInventory(data) {
     list.innerHTML = data.categories.map(cat => `
         <div style="padding: 10px; margin-bottom: 10px; background: rgba(0,243,255,0.1); border-radius: 5px; display: flex; justify-content: space-between; align-items: center;">
             <div>
-                <strong style="color: var(--tech-cyan);">${cat.name}</strong>
+                <strong style="color: var(--tech-cyan);">${escapeHtml(cat.name)}</strong>
                 <div style="color: #fff; font-size: 12px;">${cat.value}${cat.unit}</div>
             </div>
         </div>
@@ -569,7 +580,7 @@ async function loadMedicalItemsList() {
                 <div style="background: rgba(0,243,255,0.1); padding: 15px; border-radius: 5px; border-left: 3px solid var(--tech-cyan);">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div>
-                            <strong style="color: #fff;">${item.name}</strong>
+                            <strong style="color: #fff;">${escapeHtml(item.name)}</strong>
                             <span style="color: #aaa; font-size: 12px; margin-left: 10px;">(${item.type})</span>
                         </div>
                         <button onclick="removeMedicalItem(${item.id})" style="padding: 5px 10px; background: #ff4d4d; color: #fff; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">
@@ -1526,7 +1537,7 @@ function displayCrewList(crew) {
     list.innerHTML = crew.map(member => `
         <div style="padding: 10px; margin-bottom: 10px; background: rgba(0,243,255,0.1); border-radius: 5px; display: flex; justify-content: space-between; align-items: center;">
             <div>
-                <strong style="color: var(--tech-cyan);">${member.name}</strong>
+                <strong style="color: var(--tech-cyan);">${escapeHtml(member.name)}</strong>
                 <div style="color: #fff; font-size: 12px;">年龄: ${member.age} | 体重: ${member.weight}kg</div>
             </div>
         </div>
@@ -1905,8 +1916,10 @@ function resetToDefault() {
     showToast('🔄 已重置为默认值');
 }
 function startAutoRefresh(charts) {
-    refreshInterval = setInterval(() => refreshData(charts), 10000);
-    console.log('Auto-refresh started (interval: 10s)');
+    // Phase 3升级: Dashboard页面3秒刷新,其他页面10秒刷新
+    const refreshTime = currentModule === 'dashboard' ? 3000 : 10000;
+    refreshInterval = setInterval(() => refreshData(charts), refreshTime);
+    console.log(`Auto-refresh started (interval: ${refreshTime}ms for ${currentModule})`);
 }
 
 // 停止自动刷新
@@ -2644,34 +2657,48 @@ function updateSpaceWeatherOnDashboard(spaceWeather) {
 let simulationExperimentTimer = null;
 let simulationData = [];
 let simulationChart = null;
+let currentSimulationSpeed = 1; // 当前仿真速度 (1x, 5x, 10x)
 
 // 开始仿真实验
 async function startSimulationExperiment() {
-    const radiation = parseInt(document.getElementById('sim-radiation').value);
-    const energyAlloc = parseInt(document.getElementById('sim-energy-alloc').value);
     const crewCount = parseInt(document.getElementById('sim-crew-count').value);
-    const speed = parseInt(document.getElementById('sim-speed').value);
+    const foodSupply = parseInt(document.getElementById('sim-food').value);
+    const oxygenReserve = parseInt(document.getElementById('sim-oxygen').value);
+    const energyLevel = parseInt(document.getElementById('sim-energy').value);
+    const medicalSupply = parseInt(document.getElementById('sim-medical').value);
+    const radiationLevel = parseInt(document.getElementById('sim-radiation').value);
+    const missionDay = parseInt(document.getElementById('sim-day-init').value);
+    
+    // 获取用户选择的速度
+    const speedSelect = document.getElementById('sim-speed');
+    currentSimulationSpeed = speedSelect ? parseInt(speedSelect.value) : 1;
     
     // 清空之前的数据
     simulationData = [];
     document.getElementById('simulation-log').innerHTML = '<div>[SYSTEM] 实验启动...</div>';
     
-    addSimulationLog(`配置: 辐射=${radiation}%, 能源分配=${energyAlloc}%, 乘员=${crewCount}, 速度=${speed}x`);
-    addSimulationLog('正在应用实验参数...');
+    addSimulationLog(`初始参数: 乘员=${crewCount}, 食物=${foodSupply}%, 氧气=${oxygenReserve}%, 能源=${energyLevel}%, 医疗=${medicalSupply}%, 辐射=${radiationLevel}`);
+    addSimulationLog('正在应用初始参数...');
     
     try {
-        // 应用实验参数
-        await applySimulationConfig(radiation, energyAlloc, crewCount);
+        // 应用初始参数
+        await applyInitialConfig({
+            crewCount, foodSupply, oxygenReserve, energyLevel, 
+            medicalSupply, radiationLevel, missionDay
+        });
         
         addSimulationLog('✅ 参数应用成功，开始仿真...');
         
-        // 启动定时器
-        const interval = 1000 / speed; // 根据速度调整间隔
+        // 启动定时器 - 根据速度调整间隔
+        // 1x: 1秒=1小时 (24秒=1天)
+        // 5x: 0.2秒=1小时 (4.8秒=1天)
+        // 10x: 0.1秒=1小时 (2.4秒=1天)
+        const interval = 1000 / (currentSimulationSpeed * 24);
         simulationExperimentTimer = setInterval(async () => {
             await runSimulationStep();
         }, interval);
         
-        addSimulationLog(`🚀 仿真运行中 (速度: ${speed}x)`);
+        addSimulationLog(`⚡ 仿真运行中 (速度: ${currentSimulationSpeed}x, 1秒=${currentSimulationSpeed}小时)`);
         
     } catch (error) {
         addSimulationLog(`❌ 错误: ${error.message}`);
@@ -2704,32 +2731,29 @@ async function resetSimulationExperiment() {
     addSimulationLog('🔄 系统已重置，准备新实验');
 }
 
-// 应用实验配置
-async function applySimulationConfig(radiation, energyAlloc, crewCount) {
-    // 设置辐射水平
-    await fetch('/api/environment/targets', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ radiation_level: radiation })
-    });
-    
-    // 设置能源分配
-    await fetch('/api/energy/distribution', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            medical: Math.round(energyAlloc * 0.3),
-            food: Math.round(energyAlloc * 0.25),
-            environment: Math.round(energyAlloc * 0.25),
-            other: 100 - energyAlloc
-        })
-    });
+// 应用初始配置
+async function applyInitialConfig(config) {
+    const { crewCount, foodSupply, oxygenReserve, energyLevel, medicalSupply, radiationLevel, missionDay } = config;
     
     // 设置乘员数量
     await fetch('/api/crew/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ crew_count: crewCount })
+    });
+    
+    // 设置资源初始值
+    await fetch('/api/simulation/init', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            food_stability: foodSupply,
+            oxygen_level: oxygenReserve,
+            energy_level: energyLevel,
+            medical_safety: medicalSupply,
+            radiation_level: radiationLevel,
+            mission_day: missionDay
+        })
     });
 }
 
@@ -2753,26 +2777,131 @@ async function runSimulationStep() {
                 estimated_days: state.estimated_survival_days || 0
             });
             
-            // 更新显示
+            // 更新显示 - 新UI布局
             document.getElementById('sim-day').textContent = `Day ${state.mission_day}`;
             document.getElementById('sim-survival-index').textContent = `${state.survival_index.toFixed(1)}%`;
             document.getElementById('sim-est-days').textContent = state.estimated_survival_days ? `${state.estimated_survival_days}天` : '--';
             
+            // 更新生存指数进度条
+            const survivalFill = document.getElementById('survival-fill');
+            if (survivalFill) {
+                survivalFill.style.width = `${state.survival_index}%`;
+            }
+            
+            // ★★★ 更新六大系统状态 ★★★
+            updateSystemStatus('o2', state.oxygen_level);
+            updateSystemStatus('energy', state.energy_level);
+            updateSystemStatus('food', state.food_stability);
+            updateSystemStatus('medical', state.medical_supply || 98);
+            updateSystemStatus('env', state.environmental_stability || 95);
+            updateSystemStatus('coldchain', state.cold_chain_stability || 90);
+            
             // 更新图表
             updateSimulationChart();
             
-            // 记录重要事件
+            // ★★★ 紧急模式UI处理 ★★★
+            const mainContainer = document.querySelector('.main-content');
             if (state.emergency_mode) {
-                addSimulationLog('⚠️ 紧急模式触发！');
+                // 激活紧急模式UI
+                if (!mainContainer.classList.contains('emergency-mode')) {
+                    mainContainer.classList.add('emergency-mode');
+                    addSimulationLog('⚠️ ⚠️ ⚠️ EMERGENCY MODE ACTIVATED ⚠️ ⚠️ ⚠️');
+                    addSimulationLog(`原因: 氧气=${state.oxygen_level.toFixed(1)}%, 能源=${state.energy_level.toFixed(1)}%, 辐射=${state.radiation_level.toFixed(1)}%`);
+                }
+            } else {
+                // 解除紧急模式
+                if (mainContainer.classList.contains('emergency-mode')) {
+                    mainContainer.classList.remove('emergency-mode');
+                    addSimulationLog('✅ Emergency mode deactivated - systems normalizing');
+                }
             }
             
-            // 每10天记录一次日志
+            // ★★★ 实时AI决策日志显示 ★★★
+            if (state.logs && state.logs.length > 0) {
+                // 只显示最近的3条AI日志，避免刷屏
+                const recentLogs = state.logs.slice(-3);
+                recentLogs.forEach(log => {
+                    if (log.message && log.message.includes('[AI]')) {
+                        addSimulationLog(log.message);
+                    }
+                });
+            }
+            
+            // 每10天记录一次摘要日志
             if (state.mission_day % 10 === 0) {
-                addSimulationLog(`Day ${state.mission_day}: 生存指数=${state.survival_index.toFixed(1)}%, 预计生存=${state.estimated_survival_days}天`);
+                addSimulationLog(`\n--- Day ${state.mission_day} Summary ---`);
+                addSimulationLog(`生存指数: ${state.survival_index.toFixed(1)}%`);
+                addSimulationLog(`预计生存: ${state.estimated_survival_days}天`);
+                addSimulationLog(`能源: ${state.energy_level.toFixed(1)}% | 食物: ${state.food_stability.toFixed(1)}%`);
+                addSimulationLog(`氧气: ${state.oxygen_level.toFixed(1)}% | 辐射: ${state.radiation_level.toFixed(1)}%`);
+            }
+            
+            // ★★★ Phase 4: NASA太空天气数据显示 ★★★
+            if (state.space_weather) {
+                const spaceWeatherBox = document.getElementById('nasa-space-weather-box');
+                const spaceRiskEl = document.getElementById('sim-space-risk');
+                const spaceWarningEl = document.getElementById('sim-space-warning');
+                
+                if (spaceWeatherBox && spaceRiskEl) {
+                    spaceWeatherBox.style.display = 'block';
+                    
+                    const riskLevel = state.space_weather.risk_level || 'low';
+                    const riskText = {
+                        'low': '✅ LOW',
+                        'medium': '⚠️ MEDIUM',
+                        'high': '🔴 HIGH',
+                        'critical': '🚨 CRITICAL'
+                    };
+                    
+                    const riskColors = {
+                        'low': '#0f0',
+                        'medium': '#ff9f43',
+                        'high': '#ff4444',
+                        'critical': '#ff0000'
+                    };
+                    
+                    spaceRiskEl.textContent = riskText[riskLevel] || riskLevel.toUpperCase();
+                    spaceRiskEl.style.color = riskColors[riskLevel] || '#fff';
+                    
+                    // 显示警告信息
+                    if (state.space_weather.warnings && state.space_weather.warnings.length > 0) {
+                        spaceWarningEl.style.display = 'block';
+                        spaceWarningEl.textContent = state.space_weather.warnings[0];
+                    } else {
+                        spaceWarningEl.style.display = 'none';
+                    }
+                }
             }
         }
     } catch (error) {
         console.error('Simulation step failed:', error);
+        addSimulationLog(`❌ Simulation error: ${error.message}`);
+    }
+}
+
+// ★★★ 六大系统状态更新函数 ★★★
+function updateSystemStatus(system, value) {
+    const progBar = document.getElementById(`prog-${system}`);
+    const valDisplay = document.getElementById(`val-${system}`);
+    const systemItem = document.getElementById(`sys-${system}`);
+    
+    if (progBar && valDisplay && systemItem) {
+        // 更新进度条
+        progBar.style.width = `${value}%`;
+        
+        // 更新数值显示
+        valDisplay.textContent = `${value.toFixed(1)}%`;
+        
+        // 根据数值更新颜色状态
+        systemItem.classList.remove('status-good', 'status-warning', 'status-danger');
+        
+        if (value >= 60) {
+            systemItem.classList.add('status-good');
+        } else if (value >= 30) {
+            systemItem.classList.add('status-warning');
+        } else {
+            systemItem.classList.add('status-danger');
+        }
     }
 }
 
@@ -2863,28 +2992,54 @@ function exportSimulationData() {
         return;
     }
     
-    const csvContent = [
-        ['Day', 'Survival_Index', 'Energy', 'Food', 'Oxygen', 'Radiation', 'Estimated_Days'].join(','),
-        ...simulationData.map(d => [
-            d.day,
-            d.survival_index,
-            d.energy,
-            d.food,
-            d.oxygen,
-            d.radiation,
-            d.estimated_days
-        ].join(','))
-    ].join('\n');
+    // Phase 5升级: 提供CSV和JSON两种格式
+    const format = confirm('选择导出格式:\n确定 = CSV\n取消 = JSON');
     
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    let content, filename, mimeType;
+    
+    if (format) {
+        // CSV格式
+        content = [
+            ['Day', 'Survival_Index', 'Energy', 'Food', 'Oxygen', 'Radiation', 'Estimated_Days'].join(','),
+            ...simulationData.map(d => [
+                d.day,
+                d.survival_index.toFixed(2),
+                d.energy.toFixed(2),
+                d.food.toFixed(2),
+                d.oxygen.toFixed(2),
+                d.radiation.toFixed(2),
+                d.estimated_days
+            ].join(','))
+        ].join('\n');
+        
+        filename = `simulation_data_${new Date().toISOString().slice(0,10)}.csv`;
+        mimeType = 'text/csv;charset=utf-8;';
+    } else {
+        // JSON格式
+        const jsonData = {
+            experiment_info: {
+                export_time: new Date().toISOString(),
+                total_days: simulationData.length,
+                start_day: simulationData[0].day,
+                end_day: simulationData[simulationData.length - 1].day
+            },
+            data: simulationData
+        };
+        
+        content = JSON.stringify(jsonData, null, 2);
+        filename = `simulation_data_${new Date().toISOString().slice(0,10)}.json`;
+        mimeType = 'application/json;charset=utf-8;';
+    }
+    
+    const blob = new Blob([content], { type: mimeType });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `simulation_data_${new Date().getTime()}.csv`);
+    link.setAttribute('download', filename);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     
-    addSimulationLog('✅ 数据已导出为CSV文件');
+    addSimulationLog(`✅ 数据已导出为${format ? 'CSV' : 'JSON'}文件 (${simulationData.length}条记录)`);
 }

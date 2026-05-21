@@ -512,6 +512,37 @@ def update_crew_count():
     result = ai_engine.set_crew_count(crew_count)
     return jsonify(result)
 
+@app.route('/api/simulation/init', methods=['POST'])
+def init_simulation():
+    """初始化仿真实验参数"""
+    data = request.get_json() or {}
+    
+    # 验证参数范围
+    valid_params = {
+        'food_stability': (0, 100),
+        'oxygen_level': (0, 100),
+        'energy_level': (0, 100),
+        'medical_safety': (0, 100),
+        'radiation_level': (0, 100),
+        'mission_day': (0, 1000)
+    }
+    
+    adjustments = {}
+    for key, (min_val, max_val) in valid_params.items():
+        if key in data:
+            try:
+                value = float(data[key])
+                if min_val <= value <= max_val:
+                    adjustments[key] = value
+            except (ValueError, TypeError):
+                pass
+    
+    if adjustments:
+        result = ai_engine.adjust_parameters(adjustments)
+        return jsonify(result)
+    
+    return jsonify({'success': False, 'error': '没有有效的调整参数'}), 400
+
 # ==================== 通信与日志 API ====================
 
 @app.route('/api/logs/add', methods=['POST'])

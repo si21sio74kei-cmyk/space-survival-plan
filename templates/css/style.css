@@ -100,6 +100,11 @@ body {
     gap: 20px;
 }
 
+/* 视图面板样式 */
+.view-panel {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
 .metrics-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -283,4 +288,386 @@ body.emergency-mode .top-bar h1 {
     .survival-time-box h2 {
         font-size: 2rem !important;
     }
+}
+
+/* ==================== 紧急模式样式 ==================== */
+
+.emergency-mode {
+    animation: emergencyPulse 1s infinite;
+}
+
+.emergency-mode .glass-panel {
+    border-color: var(--alert-red) !important;
+    box-shadow: 0 0 20px rgba(255, 77, 77, 0.5) !important;
+}
+
+.emergency-mode .dashboard-header {
+    background: linear-gradient(90deg, rgba(255, 77, 77, 0.3), transparent);
+}
+
+.emergency-mode #module-title {
+    color: var(--alert-red) !important;
+    text-shadow: 0 0 10px var(--alert-red);
+    animation: textFlicker 0.5s infinite;
+}
+
+.emergency-mode .metric-box {
+    border: 2px solid var(--alert-red);
+    animation: borderFlash 1s infinite;
+}
+
+@keyframes emergencyPulse {
+    0%, 100% {
+        box-shadow: inset 0 0 50px rgba(255, 77, 77, 0.2);
+    }
+    50% {
+        box-shadow: inset 0 0 100px rgba(255, 77, 77, 0.4);
+    }
+}
+
+@keyframes textFlicker {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
+@keyframes borderFlash {
+    0%, 100% {
+        border-color: var(--alert-red);
+        box-shadow: 0 0 10px rgba(255, 77, 77, 0.5);
+    }
+    50% {
+        border-color: #ff6666;
+        box-shadow: 0 0 20px rgba(255, 77, 77, 0.8);
+    }
+}
+
+/* ==================== Phase 6: HUD风格扫描线 ==================== */
+
+.hud-container::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: repeating-linear-gradient(
+        0deg,
+        rgba(0, 243, 255, 0.03) 0px,
+        rgba(0, 243, 255, 0.03) 1px,
+        transparent 1px,
+        transparent 2px
+    );
+    pointer-events: none;
+    z-index: 9999;
+    animation: scanline 8s linear infinite;
+}
+
+@keyframes scanline {
+    0% {
+        transform: translateY(0);
+    }
+    100% {
+        transform: translateY(10px);
+    }
+}
+
+/* ==================== 仿真实验四大模块布局 ==================== */
+
+.simulation-lab {
+    display: grid;
+    grid-template-columns: 280px 1fr 320px;
+    grid-template-rows: 1fr 380px;
+    gap: 15px;
+    height: calc(100vh - 120px);
+}
+
+/* 模块1: 左侧输入面板 */
+.simulation-panel-left {
+    grid-column: 1;
+    grid-row: 1 / 3;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.input-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.input-group label {
+    color: #aaa;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.sim-input {
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--glass-border);
+    border-radius: 4px;
+    color: #fff;
+    font-size: 1rem;
+    transition: all 0.3s;
+}
+
+.sim-input:focus {
+    border-color: var(--tech-cyan);
+    box-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
+    outline: none;
+}
+
+.simulation-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.btn-sim {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 0.95rem;
+    transition: all 0.3s;
+    letter-spacing: 0.5px;
+}
+
+.btn-start {
+    background: var(--tech-cyan);
+    color: #000;
+}
+
+.btn-start:hover {
+    background: #00d4e0;
+    box-shadow: 0 0 15px rgba(0, 243, 255, 0.5);
+}
+
+.btn-stop {
+    background: #ff4444;
+    color: #fff;
+}
+
+.btn-stop:hover {
+    background: #ff3333;
+    box-shadow: 0 0 15px rgba(255, 68, 68, 0.5);
+}
+
+.btn-reset {
+    background: #666;
+    color: #fff;
+}
+
+.btn-reset:hover {
+    background: #777;
+}
+
+.btn-export {
+    background: var(--tech-green, #0f0);
+    color: #000;
+}
+
+.btn-export:hover {
+    box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
+}
+
+/* 模块2: 中间状态大屏 */
+.simulation-panel-center {
+    grid-column: 2;
+    grid-row: 1;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.mission-status-display {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.status-item {
+    background: rgba(0, 243, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    border-radius: 6px;
+    padding: 15px;
+    text-align: center;
+}
+
+.status-item small {
+    color: #aaa;
+    font-size: 0.75rem;
+    display: block;
+    margin-bottom: 8px;
+    letter-spacing: 1px;
+}
+
+.status-item h2 {
+    color: var(--tech-cyan);
+    font-size: 2rem;
+    margin: 0;
+    text-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+}
+
+.survival-bar {
+    width: 100%;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    margin-top: 10px;
+    overflow: hidden;
+}
+
+.survival-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--tech-cyan), var(--tech-green, #0f0));
+    transition: width 0.5s ease;
+}
+
+/* 六大系统状态 */
+.systems-status {
+    margin-top: 20px;
+}
+
+.system-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+}
+
+.system-item {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--glass-border);
+    border-radius: 6px;
+    padding: 12px;
+    transition: all 0.3s;
+}
+
+.system-label {
+    color: #fff;
+    font-size: 0.85rem;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--tech-cyan), var(--tech-green, #0f0));
+    transition: width 0.5s ease, background 0.3s;
+}
+
+.system-value {
+    color: var(--tech-cyan);
+    font-size: 1.2rem;
+    font-weight: bold;
+    text-align: center;
+}
+
+/* 系统状态颜色变化 */
+.system-item.status-good .progress-fill {
+    background: linear-gradient(90deg, #0f0, #0f0);
+}
+
+.system-item.status-warning .progress-fill {
+    background: linear-gradient(90deg, #ff9f43, #ff9f43);
+}
+
+.system-item.status-danger .progress-fill {
+    background: linear-gradient(90deg, #ff4444, #ff4444);
+}
+
+.system-item.status-good .system-value {
+    color: #0f0;
+}
+
+.system-item.status-warning .system-value {
+    color: #ff9f43;
+}
+
+.system-item.status-danger .system-value {
+    color: #ff4444;
+}
+
+/* NASA太空天气 */
+.nasa-weather-box {
+    margin-top: 20px;
+    background: rgba(255, 159, 67, 0.1);
+    border: 1px solid #ff9f43;
+    border-radius: 6px;
+    padding: 15px;
+    text-align: center;
+}
+
+.weather-risk {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin: 10px 0;
+}
+
+/* 模块3: 右侧AI日志流 */
+.simulation-panel-right {
+    grid-column: 3;
+    grid-row: 1 / 3;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+.ai-log-stream {
+    flex: 1;
+    overflow-y: auto;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(0, 255, 0, 0.2);
+    border-radius: 4px;
+    padding: 10px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.8rem;
+    color: #0f0;
+}
+
+.ai-log-stream .log-entry {
+    margin-bottom: 5px;
+    padding: 3px 0;
+    border-bottom: 1px solid rgba(0, 255, 0, 0.1);
+    animation: fadeIn 0.3s ease;
+}
+
+/* 模块4: 底部仿真图表 */
+.simulation-panel-bottom {
+    grid-column: 2;
+    grid-row: 2;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    padding: 20px;
 }
