@@ -44,6 +44,7 @@
                     <li><i class="fas fa-brain"></i> AI对话</li>
                     <li><i class="fas fa-edit"></i> 参数调整</li>
                     <li><i class="fas fa-satellite"></i> 太空数据中心</li>
+                    <li><i class="fas fa-flask"></i> 仿真实验 Simulation</li>
                 </ul>
             </nav>
 
@@ -272,6 +273,108 @@
                             <div id="earth-environment" style="color: #fff;">
                                 <p>加载中...</p>
                             </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 仿真实验视图 -->
+                <div id="view-simulation" class="view-panel" style="display: none;">
+                    <div class="dashboard-header">
+                        <div id="module-title">仿真实验 SIMULATION LAB</div>
+                    </div>
+                    
+                    <!-- 实验控制面板 -->
+                    <div class="glass-panel" style="margin-bottom: 20px; padding: 20px;">
+                        <h3 style="color: var(--tech-cyan); margin-bottom: 15px;">
+                            <i class="fas fa-sliders-h"></i> 实验参数配置 EXPERIMENT CONFIG
+                        </h3>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                            <div>
+                                <label style="color: #aaa; display: block; margin-bottom: 5px;">辐射强度 RADIATION LEVEL</label>
+                                <input type="range" id="sim-radiation" min="0" max="100" value="20" 
+                                       style="width: 100%;" oninput="document.getElementById('sim-radiation-val').textContent = this.value + '%'">
+                                <span id="sim-radiation-val" style="color: var(--tech-cyan);">20%</span>
+                            </div>
+                            <div>
+                                <label style="color: #aaa; display: block; margin-bottom: 5px;">能源分配 ENERGY ALLOCATION</label>
+                                <input type="range" id="sim-energy-alloc" min="10" max="100" value="80" 
+                                       style="width: 100%;" oninput="document.getElementById('sim-energy-alloc-val').textContent = this.value + '%'">
+                                <span id="sim-energy-alloc-val" style="color: var(--tech-cyan);">80%</span>
+                            </div>
+                            <div>
+                                <label style="color: #aaa; display: block; margin-bottom: 5px;">乘员数量 CREW COUNT</label>
+                                <input type="number" id="sim-crew-count" min="1" max="10" value="4" 
+                                       style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid var(--tech-cyan); color: #fff; border-radius: 4px;">
+                            </div>
+                            <div>
+                                <label style="color: #aaa; display: block; margin-bottom: 5px;">仿真速度 SIMULATION SPEED</label>
+                                <select id="sim-speed" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid var(--tech-cyan); color: #fff; border-radius: 4px;">
+                                    <option value="1">正常 (1秒=1小时)</option>
+                                    <option value="5">快速 (1秒=5小时)</option>
+                                    <option value="10">极速 (1秒=10小时)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div style="margin-top: 15px; display: flex; gap: 10px;">
+                            <button onclick="startSimulationExperiment()" 
+                                    style="padding: 10px 20px; background: var(--tech-cyan); color: #000; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                                <i class="fas fa-play"></i> 开始实验 START
+                            </button>
+                            <button onclick="stopSimulationExperiment()" 
+                                    style="padding: 10px 20px; background: #ff4444; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                                <i class="fas fa-stop"></i> 停止 STOP
+                            </button>
+                            <button onclick="resetSimulationExperiment()" 
+                                    style="padding: 10px 20px; background: #666; color: #fff; border: none; border-radius: 4px; cursor: pointer;">
+                                <i class="fas fa-redo"></i> 重置 RESET
+                            </button>
+                            <button onclick="exportSimulationData()" 
+                                    style="padding: 10px 20px; background: var(--tech-green); color: #000; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                                <i class="fas fa-download"></i> 导出数据 EXPORT
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- 实时数据监控 -->
+                    <div class="metrics-grid" style="margin-bottom: 20px;">
+                        <div class="metric-box glass-panel">
+                            <h4 style="color: var(--tech-cyan); margin-bottom: 10px;">实验进度 EXPERIMENT PROGRESS</h4>
+                            <div style="font-size: 2rem; color: #fff; text-align: center;">
+                                <div id="sim-day">Day 0</div>
+                                <small style="color: #aaa;">任务天数</small>
+                            </div>
+                        </div>
+                        <div class="metric-box glass-panel">
+                            <h4 style="color: var(--tech-cyan); margin-bottom: 10px;">生存指数 SURVIVAL INDEX</h4>
+                            <div style="font-size: 2rem; color: var(--tech-cyan); text-align: center;">
+                                <div id="sim-survival-index">100%</div>
+                                <small style="color: #aaa;">综合评分</small>
+                            </div>
+                        </div>
+                        <div class="metric-box glass-panel">
+                            <h4 style="color: var(--tech-cyan); margin-bottom: 10px;">预计生存 ESTIMATED DAYS</h4>
+                            <div style="font-size: 2rem; color: var(--tech-green); text-align: center;">
+                                <div id="sim-est-days">--</div>
+                                <small style="color: #aaa;">预测天数</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 实验结果图表 -->
+                    <div class="glass-panel" style="padding: 20px;">
+                        <h3 style="color: var(--tech-cyan); margin-bottom: 15px;">
+                            <i class="fas fa-chart-line"></i> 实验数据可视化 DATA VISUALIZATION
+                        </h3>
+                        <div id="simulation-chart" style="width: 100%; height: 400px;"></div>
+                    </div>
+                    
+                    <!-- 实验日志 -->
+                    <div class="glass-panel" style="margin-top: 20px; padding: 20px;">
+                        <h3 style="color: var(--tech-cyan); margin-bottom: 15px;">
+                            <i class="fas fa-clipboard-list"></i> 实验日志 EXPERIMENT LOG
+                        </h3>
+                        <div id="simulation-log" style="height: 200px; overflow-y: auto; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 4px; font-family: monospace; font-size: 12px; color: #0f0;">
+                            <div>[SYSTEM] 仿真实验系统就绪，等待启动...</div>
                         </div>
                     </div>
                 </div>

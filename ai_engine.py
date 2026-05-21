@@ -1490,6 +1490,43 @@ class AISurvivalEngine:
         
         return {'success': False, 'error': '宇航员不存在'}
     
+    def set_crew_count(self, crew_count):
+        """设置乘员数量（用于仿真实验）"""
+        state, logs = get_persistent_state()
+        
+        old_count = len(state['crew_members'])
+        
+        if crew_count > old_count:
+            # 增加乘员
+            for i in range(old_count, crew_count):
+                new_member = {
+                    'id': i + 1,
+                    'name': f'宇航员{chr(65 + i)}',
+                    'weight': 70,
+                    'age': 35,
+                    'health_status': 'good',
+                    'special_needs': [],
+                    'calorie_needs': 2500,
+                    'diet_requirements': [],
+                    'allergies': []
+                }
+                state['crew_members'].append(new_member)
+        elif crew_count < old_count:
+            # 减少乘员
+            state['crew_members'] = state['crew_members'][:crew_count]
+        
+        state['crew_count'] = len(state['crew_members'])
+        
+        log_entry = {
+            'timestamp': datetime.datetime.utcnow().isoformat(),
+            'log_type': 'INFO',
+            'message': f'乘员数量调整: {old_count} -> {state["crew_count"]}',
+            'ai_decision': 'AI已更新人员配置'
+        }
+        logs.insert(0, log_entry)
+        
+        return {'success': True, 'crew_count': state['crew_count'], 'members': state['crew_members']}
+    
     # ==================== 通信与日志 ====================
     
     def add_manual_log(self, log_data):

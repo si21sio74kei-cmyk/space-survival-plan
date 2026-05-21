@@ -121,6 +121,7 @@ function setupNavigation() {
             else if (text.includes('AI对话')) module = 'ai';
             else if (text.includes('参数')) module = 'custom';
             else if (text.includes('太空')) module = 'space-data';
+            else if (text.includes('仿真')) module = 'simulation';
             else module = 'dashboard';
             
             currentModule = module;
@@ -196,6 +197,9 @@ async function loadModuleContent(module) {
             break;
         case 'space-data':
             await loadSpaceDataModule();
+            break;
+        case 'simulation':
+            // 仿真实验模块，无需加载
             break;
     }
 }
@@ -2634,4 +2638,253 @@ function updateSpaceWeatherOnDashboard(spaceWeather) {
     } else {
         indicator.style.animation = 'none';
     }
+}
+
+// ==================== 仿真实验功能 ====================
+let simulationExperimentTimer = null;
+let simulationData = [];
+let simulationChart = null;
+
+// 开始仿真实验
+async function startSimulationExperiment() {
+    const radiation = parseInt(document.getElementById('sim-radiation').value);
+    const energyAlloc = parseInt(document.getElementById('sim-energy-alloc').value);
+    const crewCount = parseInt(document.getElementById('sim-crew-count').value);
+    const speed = parseInt(document.getElementById('sim-speed').value);
+    
+    // 清空之前的数据
+    simulationData = [];
+    document.getElementById('simulation-log').innerHTML = '<div>[SYSTEM] 实验启动...</div>';
+    
+    addSimulationLog(`配置: 辐射=${radiation}%, 能源分配=${energyAlloc}%, 乘员=${crewCount}, 速度=${speed}x`);
+    addSimulationLog('正在应用实验参数...');
+    
+    try {
+        // 应用实验参数
+        await applySimulationConfig(radiation, energyAlloc, crewCount);
+        
+        addSimulationLog('✅ 参数应用成功，开始仿真...');
+        
+        // 启动定时器
+        const interval = 1000 / speed; // 根据速度调整间隔
+        simulationExperimentTimer = setInterval(async () => {
+            await runSimulationStep();
+        }, interval);
+        
+        addSimulationLog(`🚀 仿真运行中 (速度: ${speed}x)`);
+        
+    } catch (error) {
+        addSimulationLog(`❌ 错误: ${error.message}`);
+    }
+}
+
+// 停止仿真实验
+function stopSimulationExperiment() {
+    if (simulationExperimentTimer) {
+        clearInterval(simulationExperimentTimer);
+        simulationExperimentTimer = null;
+        addSimulationLog('⏸️ 仿真已暂停');
+    }
+}
+
+// 重置仿真实验
+async function resetSimulationExperiment() {
+    stopSimulationExperiment();
+    simulationData = [];
+    document.getElementById('simulation-log').innerHTML = '<div>[SYSTEM] 系统已重置</div>';
+    document.getElementById('sim-day').textContent = 'Day 0';
+    document.getElementById('sim-survival-index').textContent = '100%';
+    document.getElementById('sim-est-days').textContent = '--';
+    
+    if (simulationChart) {
+        simulationChart.dispose();
+        simulationChart = null;
+    }
+    
+    addSimulationLog('🔄 系统已重置，准备新实验');
+}
+
+// 应用实验配置
+async function applySimulationConfig(radiation, energyAlloc, crewCount) {
+    // 设置辐射水平
+    await fetch('/api/environment/targets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ radiation_level: radiation })
+    });
+    
+    // 设置能源分配
+    await fetch('/api/energy/distribution', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            medical: Math.round(energyAlloc * 0.3),
+            food: Math.round(energyAlloc * 0.25),
+            environment: Math.round(energyAlloc * 0.25),
+            other: 100 - energyAlloc
+        })
+    });
+    
+    // 设置乘员数量
+    await fetch('/api/crew/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ crew_count: crewCount })
+    });
+}
+
+// 执行仿真步骤
+async function runSimulationStep() {
+    try {
+        const response = await fetch('/api/simulate_step', { method: 'POST' });
+        const data = await response.json();
+        
+        if (data.success) {
+            const state = data.state;
+            
+            // 记录数据点
+            simulationData.push({
+                day: state.mission_day,
+                survival_index: state.survival_index,
+                energy: state.energy_level,
+                food: state.food_stability,
+                oxygen: state.oxygen_level,
+                radiation: state.radiation_level,
+                estimated_days: state.estimated_survival_days || 0
+            });
+            
+            // 更新显示
+            document.getElementById('sim-day').textContent = `Day ${state.mission_day}`;
+            document.getElementById('sim-survival-index').textContent = `${state.survival_index.toFixed(1)}%`;
+            document.getElementById('sim-est-days').textContent = state.estimated_survival_days ? `${state.estimated_survival_days}天` : '--';
+            
+            // 更新图表
+            updateSimulationChart();
+            
+            // 记录重要事件
+            if (state.emergency_mode) {
+                addSimulationLog('⚠️ 紧急模式触发！');
+            }
+            
+            // 每10天记录一次日志
+            if (state.mission_day % 10 === 0) {
+                addSimulationLog(`Day ${state.mission_day}: 生存指数=${state.survival_index.toFixed(1)}%, 预计生存=${state.estimated_survival_days}天`);
+            }
+        }
+    } catch (error) {
+        console.error('Simulation step failed:', error);
+    }
+}
+
+// 更新仿真图表
+function updateSimulationChart() {
+    if (!simulationChart) {
+        simulationChart = echarts.init(document.getElementById('simulation-chart'));
+    }
+    
+    const days = simulationData.map(d => d.day);
+    const survivalIndices = simulationData.map(d => d.survival_index);
+    const energies = simulationData.map(d => d.energy);
+    const foods = simulationData.map(d => d.food);
+    const oxygens = simulationData.map(d => d.oxygen);
+    
+    const option = {
+        title: {
+            text: '仿真实验数据趋势',
+            textStyle: { color: '#fff' }
+        },
+        tooltip: {
+            trigger: 'axis'
+        },
+        legend: {
+            data: ['生存指数', '能源', '食物', '氧气'],
+            textStyle: { color: '#fff' }
+        },
+        xAxis: {
+            type: 'category',
+            data: days,
+            name: '任务天数',
+            axisLabel: { color: '#aaa' }
+        },
+        yAxis: {
+            type: 'value',
+            name: '百分比 (%)',
+            axisLabel: { color: '#aaa' }
+        },
+        series: [
+            {
+                name: '生存指数',
+                type: 'line',
+                data: survivalIndices,
+                smooth: true,
+                itemStyle: { color: '#00f3ff' }
+            },
+            {
+                name: '能源',
+                type: 'line',
+                data: energies,
+                smooth: true,
+                itemStyle: { color: '#ff9500' }
+            },
+            {
+                name: '食物',
+                type: 'line',
+                data: foods,
+                smooth: true,
+                itemStyle: { color: '#00ff88' }
+            },
+            {
+                name: '氧气',
+                type: 'line',
+                data: oxygens,
+                smooth: true,
+                itemStyle: { color: '#ff4444' }
+            }
+        ]
+    };
+    
+    simulationChart.setOption(option);
+}
+
+// 添加仿真日志
+function addSimulationLog(message) {
+    const logContainer = document.getElementById('simulation-log');
+    const timestamp = new Date().toLocaleTimeString();
+    const logEntry = document.createElement('div');
+    logEntry.textContent = `[${timestamp}] ${message}`;
+    logContainer.appendChild(logEntry);
+    logContainer.scrollTop = logContainer.scrollHeight;
+}
+
+// 导出仿真数据
+function exportSimulationData() {
+    if (simulationData.length === 0) {
+        alert('没有可导出的数据！');
+        return;
+    }
+    
+    const csvContent = [
+        ['Day', 'Survival_Index', 'Energy', 'Food', 'Oxygen', 'Radiation', 'Estimated_Days'].join(','),
+        ...simulationData.map(d => [
+            d.day,
+            d.survival_index,
+            d.energy,
+            d.food,
+            d.oxygen,
+            d.radiation,
+            d.estimated_days
+        ].join(','))
+    ].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `simulation_data_${new Date().getTime()}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    addSimulationLog('✅ 数据已导出为CSV文件');
 }

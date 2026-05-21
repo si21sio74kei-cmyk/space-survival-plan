@@ -500,6 +500,18 @@ def update_schedule_api():
     )
     return jsonify(result)
 
+@app.route('/api/crew/update', methods=['POST'])
+def update_crew_count():
+    """更新乘员数量（用于仿真实验）"""
+    data = request.get_json() or {}
+    crew_count = data.get('crew_count', 4)
+    
+    if not isinstance(crew_count, int) or crew_count < 1 or crew_count > 10:
+        return jsonify({'success': False, 'error': '乘员数量必须在1-10之间'}), 400
+    
+    result = ai_engine.set_crew_count(crew_count)
+    return jsonify(result)
+
 # ==================== 通信与日志 API ====================
 
 @app.route('/api/logs/add', methods=['POST'])
