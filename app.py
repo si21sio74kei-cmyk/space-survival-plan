@@ -787,6 +787,68 @@ def get_macau_weather():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/space-data/health')
+def check_space_data_health():
+    """检查所有太空数据API的健康状态"""
+    if not SPACE_API_AVAILABLE:
+        return jsonify({'error': '太空数据API模块未加载'}), 503
+    
+    health_status = {}
+    apis_to_check = [
+        ('space_weather_summary', lambda: space_api.get_space_weather_summary()),
+        ('iss_position', space_api.get_iss_position),
+        ('astronauts', space_api.get_astronauts_in_space),
+        ('spacex_latest', space_api.get_spacex_latest_launch),
+        ('spacex_rockets', space_api.get_spacex_rockets),
+        ('mars_photos', lambda: space_api.get_mars_photos(per_page=1)),
+        ('epic_earth', lambda: space_api.get_epic_earth_photos()),
+        ('moon_data', space_api.get_moon_data),
+        ('planets_data', space_api.get_planets_data),
+        ('earth_disasters', lambda: space_api.get_earth_disasters(limit=1)),
+        ('earthquakes', lambda: space_api.get_earthquakes(min_magnitude=5.0, days=1)),
+        ('air_quality', lambda: space_api.get_air_quality()),
+        ('macau_weather', space_api.get_macau_weather),
+    ]
+    
+    for name, func in apis_to_check:
+        try:
+            result = func()
+            # 检查是否返回错误信息
+            if isinstance(result, dict) and 'error' in result:
+                health_status[name] = {
+                    'status': 'error',
+                    'error': result['error'],
+                    'data_available': False
+                }
+            else:
+                health_status[name] = {
+                    'status': 'ok',
+                    'data_available': result is not None,
+                    'data_type': type(result).__name__
+                }
+        except Exception as e:
+            health_status[name] = {
+                'status': 'error',
+                'error': str(e),
+                'data_available': False
+            }
+    
+    # 统计健康状况
+    total = len(health_status)
+    ok_count = sum(1 for v in health_status.values() if v['status'] == 'ok')
+    error_count = total - ok_count
+    
+    return jsonify({
+        'timestamp': datetime.utcnow().isoformat(),
+        'summary': {
+            'total': total,
+            'ok': ok_count,
+            'error': error_count,
+            'health_rate': f"{ok_count}/{total} ({ok_count*100//total}%)"
+        },
+        'apis': health_status
+    })
+
 # ==================== 本地运行 ====================
 
 if __name__ == '__main__':
