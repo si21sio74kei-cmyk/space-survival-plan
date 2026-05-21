@@ -3,6 +3,19 @@ let currentModule = 'dashboard';
 let refreshInterval = null;
 let simulationTimer = null; // 模拟定时器
 
+// 页面卸载时清理定时器
+window.addEventListener('beforeunload', () => {
+    if (refreshInterval) {
+        clearInterval(refreshInterval);
+        refreshInterval = null;
+    }
+    if (simulationTimer) {
+        clearInterval(simulationTimer);
+        simulationTimer = null;
+    }
+    Logger.log('Timers cleared on page unload');
+});
+
 // ==================== localStorage状态管理 ====================
 function saveStateToLocalStorage(state) {
     try {

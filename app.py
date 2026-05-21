@@ -793,6 +793,11 @@ def check_space_data_health():
     if not SPACE_API_AVAILABLE:
         return jsonify({'error': '太空数据API模块未加载'}), 503
     
+    import signal
+    
+    def timeout_handler(signum, frame):
+        raise TimeoutError("API call timed out")
+    
     health_status = {}
     apis_to_check = [
         ('space_weather_summary', lambda: space_api.get_space_weather_summary()),
@@ -812,7 +817,20 @@ def check_space_data_health():
     
     for name, func in apis_to_check:
         try:
+            # Windows不支持signal.SIGALRM，使用try-except
+            try:
+                signal.signal(signal.SIGALRM, timeout_handler)
+                signal.alarm(5)  # 5秒超时
+            except (AttributeError, ValueError):
+                pass  # Windows系统跳过
+            
             result = func()
+            
+            try:
+                signal.alarm(0)  # 取消超时
+            except (AttributeError, ValueError):
+                pass
+            
             # 检查是否返回错误信息
             if isinstance(result, dict) and 'error' in result:
                 health_status[name] = {
@@ -826,6 +844,12 @@ def check_space_data_health():
                     'data_available': result is not None,
                     'data_type': type(result).__name__
                 }
+        except TimeoutError:
+            health_status[name] = {
+                'status': 'timeout',
+                'error': 'API调用超时（>5秒）',
+                'data_available': False
+            }
         except Exception as e:
             health_status[name] = {
                 'status': 'error',
