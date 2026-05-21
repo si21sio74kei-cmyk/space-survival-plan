@@ -51,7 +51,7 @@ def validate_json(*required_fields):
         @wraps(f)
         def decorated_function(*args, **kwargs):
             data = request.get_json()
-            if data is None:
+            if not data:  # 处理 None 和 {}
                 return jsonify({'success': False, 'error': '请求必须包含JSON数据'}), 400
             
             missing = [field for field in required_fields if field not in data]
